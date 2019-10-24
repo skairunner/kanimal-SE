@@ -1,0 +1,33 @@
+﻿using System;
+
+namespace kanimal
+{
+    public enum ExitCodes
+    {
+        Normal = 0,
+        GenericProblem = 1,
+        IncorrectHeader = 2
+    }
+    
+    public class KAnimalException : Exception
+    {
+        protected KAnimalException(string message)
+            : base(message)
+        {
+            
+        }
+    }
+    
+    public class HeaderAssertException: KAnimalException
+    {
+        public string ExpectedHeader { get; }
+        public string ActualHeader { get; }
+
+        public HeaderAssertException(string message, string expected, string actual)
+        : base(message)
+        {
+            ExpectedHeader = expected;
+            ActualHeader = actual;
+        }
+    }
+}

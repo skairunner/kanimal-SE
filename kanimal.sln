@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kanimal", "kanimal\kanimal.csproj", "{24675B2F-0654-4662-BEF9-E023CB21D6CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kanimal-cli", "kanimal-cli\kanimal-cli.csproj", "{387A2060-D187-491D-A600-867A59FC9E23}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{24675B2F-0654-4662-BEF9-E023CB21D6CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24675B2F-0654-4662-BEF9-E023CB21D6CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24675B2F-0654-4662-BEF9-E023CB21D6CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24675B2F-0654-4662-BEF9-E023CB21D6CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{387A2060-D187-491D-A600-867A59FC9E23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{387A2060-D187-491D-A600-867A59FC9E23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{387A2060-D187-491D-A600-867A59FC9E23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{387A2060-D187-491D-A600-867A59FC9E23}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
