@@ -6,7 +6,8 @@ namespace kanimal
     {
         Normal = 0,
         GenericProblem = 1,
-        IncorrectHeader = 2
+        IncorrectHeader = 2,
+        IncorrectArguments = 3,
     }
     
     public class KAnimalException : Exception
