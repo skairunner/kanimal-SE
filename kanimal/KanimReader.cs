@@ -14,10 +14,10 @@ namespace kanimal
         private Stream bild, anim;
         
         private Bitmap image;
-        private Dictionary<int, string> BuildHashes, AnimHashes;
-        private KBuild.Build BuildData;
-        private List<KBuild.Row> BuildTable;
-        private KAnim.Anim AnimData;
+        public Dictionary<int, string> BuildHashes, AnimHashes;
+        public KBuild.Build BuildData;
+        public List<KBuild.Row> BuildTable;
+        public KAnim.Anim AnimData;
         private Dictionary<string, int> AnimIdMap;
 
         private bool bildParsed = false, animParsed = false;
@@ -62,11 +62,11 @@ namespace kanimal
                 Version = reader.ReadInt32(),
                 SymbolCount = reader.ReadInt32(),
                 FrameCount = reader.ReadInt32(),
-                Name = reader.ReadString(),
+                Name = reader.ReadPString(),
                 Symbols = new List<KBuild.Symbol>()
             };
 
-            for (int i = 0; i < buildData.Symbols.Count; i++)
+            for (int i = 0; i < buildData.SymbolCount; i++)
             {
                 var symbol = new KBuild.Symbol
                 {
@@ -114,7 +114,7 @@ namespace kanimal
             for (int i = 0; i < numHashes; i++)
             {
                 var hash = reader.ReadInt32();
-                var str = reader.ReadString();
+                var str = reader.ReadPString();
                 buildHashes[hash] = str;
             }
 
@@ -186,7 +186,7 @@ namespace kanimal
 
             ParseAnims(reader);
             ReadAnimHashes(reader);
-            ReadAnimIds(reader);
+            ReadAnimIds();
             
             Utilities.LogDebug(Logger, AnimData);
             Utilities.LogDebug(Logger, AnimHashes);
@@ -206,7 +206,7 @@ namespace kanimal
 
             for (int i = 0; i < animData.AnimCount; i++)
             {
-                var name = reader.ReadString();
+                var name = reader.ReadPString();
                 var hash = reader.ReadInt32();
                 Logger.Debug($"anim with name={name} but hash={hash}");
                 var bank = new KAnim.AnimBank
@@ -278,14 +278,14 @@ namespace kanimal
             for (int i = 0; i < numHashes; i++)
             {
                 var hash = reader.ReadInt32();
-                var text = reader.ReadString();
+                var text = reader.ReadPString();
                 animHashes[hash] = text;
             }
 
             AnimHashes = animHashes;
         }
 
-        private void ReadAnimIds(BinaryReader reader)
+        private void ReadAnimIds()
         {
             var animIdMap = new Dictionary<string, int>();
 
@@ -297,9 +297,10 @@ namespace kanimal
                     foreach (var element in frame.Elements)
                     {
                         var name = $"{AnimHashes[element.Image]}_{element.Index}_{AnimHashes[element.Layer]}";
-                        if (!AnimIdMap.ContainsKey(name))
+                        if (!animIdMap.ContainsKey(name))
                         {
-                            AnimIdMap[name] = key++;
+                            animIdMap[name] = key;
+                            key += 1;
                         }
                     }
                 }

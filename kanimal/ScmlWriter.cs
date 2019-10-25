@@ -36,6 +36,7 @@ namespace kanimal
             // Finally, output to a file
             var writer = new XmlTextWriter(path, Encoding.Unicode);
             Scml.WriteTo(writer);
+            writer.Flush();
         }
 
         protected virtual void PrepareFile()
@@ -76,7 +77,7 @@ namespace kanimal
                     // this computation changes pivot from being in whatever
                     // coordinate system it was originally being specified in to being specified
                     // as just a scalar multiple of the width/height (starting at the midpoint of 0.5)
-                    var pivot_x = 0 - x / row.PivotHeight;
+                    var pivot_x = 0 - x / row.PivotWidth;
                     var pivot_y = 1 + y / row.PivotHeight;
 
                     var filenode = Scml.CreateElement("file");
@@ -156,7 +157,7 @@ namespace kanimal
                     object_ref.SetAttribute("timeline", idMap[occName].ToString());
                     // b/c ONI has animation properties for each element specified at every frame the timeline key frame that
                     // matches a mainline key frame is always the same
-                    object_ref.SetAttribute("key", frame.ToString());
+                    object_ref.SetAttribute("key", frameIndex.ToString());
                     object_ref.SetAttribute("z_index", (frame.ElementCount - elementIndex).ToString());
 
                     keyframe.AppendChild(object_ref);
@@ -199,7 +200,7 @@ namespace kanimal
 
                     object_def.SetAttribute("file", FilenameIndex[filename]);
                     object_def.SetAttribute("x", (trans.X * 0.5f).ToString("G5"));
-                    object_def.SetAttribute("y", (trans.Y * 0.5f).ToString("G5"));
+                    object_def.SetAttribute("y", (-trans.Y * 0.5f).ToString("G5"));
                     object_def.SetAttribute("angle", trans.Angle.ToString("G5"));
                     object_def.SetAttribute("scale_x", trans.ScaleX.ToString("G5"));
                     object_def.SetAttribute("scale_y", trans.ScaleY.ToString("G5"));

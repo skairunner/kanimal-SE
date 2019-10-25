@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-    
+
 namespace kanimal
 {
     public static class Kanimal
@@ -18,9 +18,8 @@ namespace kanimal
             // Ensure output dirs exist
             Directory.CreateDirectory(outputPath);
 
-            Logger.Info($"Outputting path is \"{outputPath}\"");
+            Logger.Info($"Output path is \"{outputPath}\"");
 
-            Logger.Info("Parsing build data.");
             var reader = new KanimReader(
                 new FileStream(buildPathStr, FileMode.Open), 
                 new FileStream(animPathStr, FileMode.Open),
@@ -36,7 +35,11 @@ namespace kanimal
             reader.ReadAnimData();
             
             Logger.Info("Writing...");
+            var writer = new ScmlWriter();
+            writer.Init(reader.BuildData, reader.BuildTable, reader.AnimData, reader.AnimHashes);
             
+            var outputFilePath = Path.Join(outputPath, $"{reader.BuildData.Name}.scml");
+            writer.Save(outputFilePath);
         }
     }
 }

@@ -13,15 +13,15 @@ namespace kanimal_cli
             var config = new NLog.Config.LoggingConfiguration();
             
             var logconsole = new NLog.Targets.ConsoleTarget("logconsole");
-            logconsole.Layout = "${level:uppercase=true}|${message}";
+            logconsole.Layout = "${message}";
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
             LogManager.Configuration = config;
 
-            var basepath = @"C:\Users\skairunner\RiderProjects\kanimal\testcases";
+            var basepath = @"C:\Users\skairunner\RiderProjects\kanimal\testcases\geyser_gas_steam";
             kanimal.Kanimal.ToScml(
-                Path.Join(basepath, "zestysalsa_0.png"),
-                Path.Join(basepath, "zestysalsa_build.bytes"),
-                Path.Join(basepath, "zestysalsa_anim.bytes"),
+                Path.Join(basepath, "geyser_gas_steam_0.png"),
+                Path.Join(basepath, "geyser_gas_steam_build.bytes"),
+                Path.Join(basepath, "geyser_gas_steam_anim.bytes"),
                 Path.Join(basepath, "output"));
         }
     }
