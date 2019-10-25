@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using NLog;
 
 namespace kanimal_cli
@@ -9,22 +10,19 @@ namespace kanimal_cli
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
-            
             var config = new NLog.Config.LoggingConfiguration();
             
             var logconsole = new NLog.Targets.ConsoleTarget("logconsole");
+            logconsole.Layout = "${level:uppercase=true}|${message}";
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
-            NLog.LogManager.Configuration = config;
+            LogManager.Configuration = config;
 
-            try
-            {
-                throw new Exception("test exception please ignore");
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-            }
+            var basepath = @"C:\Users\skairunner\RiderProjects\kanimal\testcases";
+            kanimal.Kanimal.ToScml(
+                Path.Join(basepath, "zestysalsa_0.png"),
+                Path.Join(basepath, "zestysalsa_build.bytes"),
+                Path.Join(basepath, "zestysalsa_anim.bytes"),
+                Path.Join(basepath, "output"));
         }
     }
 }

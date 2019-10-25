@@ -1,9 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.VisualBasic.CompilerServices;
 
 namespace kanimal
 {
     namespace KAnim
     {
+        using AnimHashTable = Dictionary<int, string>;
+
         public struct Anim: IToDebugString
         {
             public int Version, ElementCount, FrameCount, AnimCount, MaxVisibleSymbolFrames;
@@ -22,7 +26,65 @@ namespace kanimal
             public int Hash, FrameCount;
             public float Rate;
             public Dictionary<string, int> ElementIdMap;
+            private AnimHashTable prevHashTable;
             public List<Frame> Frames;
+            
+            public SortedDictionary<string, int> BuildHistogram(AnimHashTable animHashes)
+            {
+                var overallHistogram = new SortedDictionary<string, int>();
+
+                foreach (var frame in Frames)
+                {
+                    var perFrameHistogram = new SortedDictionary<string, int>();
+                    foreach (var element in frame.Elements)
+                    {
+                        var name = element.FindName(animHashes);
+                        if (perFrameHistogram.ContainsKey(name))
+                        {
+                            perFrameHistogram[name] += 1;
+                        }
+                        else
+                        {
+                            perFrameHistogram[name] = 1;
+                        }
+                    }
+                    
+                    // update overall histograms once maximums are found
+                    foreach (var entry in perFrameHistogram)
+                    {
+                        if (!overallHistogram.ContainsKey(entry.Key) || overallHistogram[entry.Key] < entry.Value)
+                        {
+                            overallHistogram[entry.Key] = entry.Value;
+                        }
+                    }
+                }
+
+                return overallHistogram;
+            }
+
+            public Dictionary<string, int> BuildIdMap(AnimHashTable animHashes)
+            {
+                if (animHashes == prevHashTable)
+                {
+                    return ElementIdMap;
+                }
+                var histogram = BuildHistogram(animHashes);
+                var idMap = new Dictionary<string, int>();
+                var index = 0;
+                foreach (var entry in histogram)
+                {
+                    var name = entry.Key;
+                    var occurrences = entry.Value;
+                    for (int i = 0; i < occurrences; i++)
+                    {
+                        idMap[Utilities.GetAnimIdName(name, i)] = index++;
+                    }
+                }
+
+                ElementIdMap = idMap;
+                prevHashTable = animHashes;
+                return idMap;
+            } 
         }
 
         public struct Frame
@@ -34,6 +96,11 @@ namespace kanimal
 
         public struct Element
         {
+            public struct Transformation
+            {
+                public double X, Y, Angle, ScaleX, ScaleY;
+            }
+            
             public int Image, Index, Layer, Flags;
             // flags has just one value
             // 1-> fg
@@ -59,6 +126,65 @@ namespace kanimal
              * 	is well defined even if the reverse isn't
              */
             public float Order;
+
+            public string FindName(AnimHashTable animHashes)
+            {
+                return $"{animHashes[Image]}_{Index}";
+            }
+
+            public string FindFilename(AnimHashTable animHashes)
+            {
+                return $"{animHashes[Image]}_{Index}";
+            }
+
+            // Takes the matrix values and returns a typical separate-component transform object
+            public Transformation Decompose()
+            {
+                // is part of the formula for decomposing transformation matrix into components
+                // see https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
+                var scale_x = Math.Sqrt(M1 * M1 + M2 * M2);
+                var scale_y = Math.Sqrt(M3 * M3 + M4 * M4);
+
+                var det = M1 * M4 - M3 * M2;
+                if (det < 0)
+                {
+                    scale_y *= -1;
+                }
+                
+                // still part of the formula for obtaining rotation component from combined rotation + scaling
+                // undue scaling by dividing by scaling and then taking average value of sin/cos to make it more
+                // accurate (b/c sin and cos appear twice each in 2d rotation matrix)
+                var sin_approx = 0.5 * (M3 / scale_y - M2 / scale_x);
+                var cos_approx = 0.5 * (M1 / scale_x + M4 / scale_y);
+
+                var m1 = Utilities.ClampRange(-1, M1 / scale_x, 1);
+                var m2 = Utilities.ClampRange(-1, M2 / scale_x, 1);
+                var m3 = Utilities.ClampRange(-1, M3 / scale_y, 1);
+                var m4 = Utilities.ClampRange(-1, M4 / scale_y, 1);
+
+                var angle = Math.Atan2(sin_approx, cos_approx);
+                
+                // it seems as if the notion of simply having x,y, angle and scale are not really sufficient to describe the
+                // transformation applied to each point since the 2x3 matrix m1...m6 doesn't nicely decompose into a valid rotation matrix
+                // basically the two components that are sin are not equal and the two components that are cos are not equal. This would imply
+                // that there is some additional transformation being applied to each point in addition to just the scale and rotation information
+                // that makes it such that when we just look at that rotation information it does not produce the correct result
+                if (angle < 0)
+                {
+                    angle += 2 * Math.PI;
+                }
+
+                angle *= 180 / Math.PI;
+
+                return new Transformation
+                {
+                    X = M5,
+                    Y = M6,
+                    Angle = angle,
+                    ScaleX = scale_x,
+                    ScaleY = scale_y
+                };
+            }
         }
     }
 }

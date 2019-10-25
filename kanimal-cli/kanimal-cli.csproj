@@ -10,4 +10,8 @@
       <PackageReference Include="NLog" Version="4.6.7" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\kanimal\kanimal.csproj" />
+    </ItemGroup>
+
 </Project>
