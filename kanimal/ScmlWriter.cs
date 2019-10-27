@@ -46,8 +46,8 @@ namespace kanimal
             Scml.AppendChild(SpriterRoot);
             SpriterRoot.SetAttribute("scml_version", "1.0");
             // look into setting this to kanimAL instead; it might work?
-            SpriterRoot.SetAttribute("generator", "BrashMonkey Spriter");
-            SpriterRoot.SetAttribute("generator_version", "r11");
+            SpriterRoot.SetAttribute("generator", "kanimAL");
+            SpriterRoot.SetAttribute("generator_version", "v1");
         }
 
         protected virtual void AddFolderInfo()

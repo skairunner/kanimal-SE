@@ -7,17 +7,13 @@ using NLog;
 
 namespace kanimal
 {
-    public class KanimReader
+    public class KanimReader: Reader
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         
         private Stream bild, anim;
         
         private Bitmap image;
-        public Dictionary<int, string> BuildHashes, AnimHashes;
-        public KBuild.Build BuildData;
-        public List<KBuild.Row> BuildTable;
-        public KAnim.Anim AnimData;
         private Dictionary<string, int> AnimIdMap;
 
         private bool bildParsed = false, animParsed = false;
@@ -47,7 +43,7 @@ namespace kanimal
             
             ReadSymbols(reader);
             ReadBuildHashes(reader);
-            BuildBuildTable(reader);
+            BuildBuildTable(image.Width, image.Height);
             
             Utilities.LogDebug(Logger, BuildData);
             Utilities.LogDebug(Logger, BuildHashes);
@@ -121,41 +117,6 @@ namespace kanimal
             BuildHashes = buildHashes;
         }
 
-        private void BuildBuildTable(BinaryReader reader)
-        {
-            var imgW = image.Width;
-            var imgH = image.Height;
-            var buildTable = new List<KBuild.Row>();
-            foreach (var symbol in BuildData.Symbols)
-            {
-                foreach (var frame in symbol.Frames)
-                {
-                    var row = new KBuild.Row
-                    {
-                        Build = BuildData,
-                        Name = BuildHashes[symbol.Hash],
-                        Index = frame.SourceFrameNum,
-                        Hash = symbol.Hash,
-                        Time = frame.Time,
-                        Duration = frame.Duration,
-                        X1 = frame.X1 * imgW,
-                        Y1 = (1f - frame.Y1) * imgH,
-                        X2 = frame.X2 * imgW,
-                        Y2 = (1 - frame.Y2) * imgH,
-                        Width = (frame.X2 - frame.X1) * imgW,
-                        Height = (frame.Y2 - frame.Y1) * imgH,
-                        PivotX = frame.PivotX,
-                        PivotY = frame.PivotY,
-                        PivotHeight = frame.PivotHeight,
-                        PivotWidth = frame.PivotWidth
-                    };
-                    buildTable.Add(row);
-                }
-            }
-
-            BuildTable = buildTable;
-        }
-        
         // Unpacks the spritesheet into individual sprites, written to the output directory
         public void ExportTextures(string outputPath)
         {
@@ -320,6 +281,19 @@ namespace kanimal
                     expectedHeader,
                     actualHeader);
             }
+        }
+
+        // TODO: Include images into the in-memory format & remove outputdir arg for something better
+        public override void read(string outputDir)
+        {
+            Logger.Info("Parsing build data.");
+            ReadBuildData();
+            
+            Logger.Info("Exporting textures.");
+            ExportTextures(outputDir);
+            
+            Logger.Info("Parsing animation data.");
+            ReadAnimData();
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using NLog;
 
 namespace kanimal
@@ -10,6 +11,8 @@ namespace kanimal
     public static class Utilities
     {
         public const int MS_PER_S = 1000;
+        public static Regex SpriteNameRegex = new Regex(
+            @"^(?<basename>[\w\d.* '+=-]+)_(?<frame>\d+)(?<extension>\.[\w\d]{1,4})?");
         
         public static void LogDebug(Logger logger, AnimHashTable hashes)
         {
@@ -64,6 +67,73 @@ namespace kanimal
             }
 
             return Math.Max(Math.Min(x, b), a);
+        }
+
+        public static string GetSpriteBaseName(string name)
+        {
+            return SpriteNameRegex.Match(name).Groups["basename"].Value;
+        }
+
+        public static string WithoutExtension(string name)
+        {
+            return name.Substring(0, name.LastIndexOf(".", StringComparison.Ordinal));
+        }
+
+        // depends on the filename being properly formatted
+        public static int GetFrameCount(string filename)
+        {
+            try
+            {
+                return int.Parse(SpriteNameRegex.Match(filename).Groups["frame"].Value);
+            }
+            catch (FormatException)
+            {
+                throw new ProjectParseException(
+                    $"The file name \"{filename}\" is not in the correct format. Make sure the base name (excluding the extension) is followed by an underscore and a number.");
+            }
+        }
+
+        public static int KleiHash(string str)
+        {
+            if (str == null)
+                return 0;
+
+            int hash = 0;
+            str = str.ToLower();
+            for (int i = 0; i < str.Length; i++)
+            {
+                hash = str.ToLower()[i] + (hash << 6) + (hash << 16) - hash;
+            }
+
+            return hash;
+        }
+
+        public static T Min<T>(params T[] values) where T: IComparable<T>
+        {
+            var min = values[0];
+            for (int i = 1; i < values.Length; i++)
+            {
+                if (values[i].CompareTo(min) < 0)
+                {
+                    min = values[i];
+                }
+            }
+
+            return min;
+        }
+        
+        public static T Max<T>(params T[] values) where T: IComparable<T>
+        {
+            var max = values[0];
+            for (int i = 1; i < values.Length; i++)
+            {
+                if (values[i].CompareTo(max) > 0)
+                {
+                    max = values[i];
+                }
+            }
+
+            return max;
         }
     }
 }

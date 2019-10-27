@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing.Imaging;
 using System.IO;
 
 namespace kanimal
@@ -25,14 +26,7 @@ namespace kanimal
                 new FileStream(animPathStr, FileMode.Open),
                 new FileStream(imgPathStr, FileMode.Open));
             
-            Logger.Info("Parsing build data.");
-            reader.ReadBuildData();
-            
-            Logger.Info("Exporting textures.");
-            reader.ExportTextures(outputDir);
-            
-            Logger.Info("Parsing animation data.");
-            reader.ReadAnimData();
+            reader.read(outputPath);
             
             Logger.Info("Writing...");
             var writer = new ScmlWriter();
@@ -40,6 +34,23 @@ namespace kanimal
             
             var outputFilePath = Path.Join(outputPath, $"{reader.BuildData.Name}.scml");
             writer.Save(outputFilePath);
+            
+            Logger.Info("Done.");
+        }
+
+        public static void ScmlToScml(string scmlpath, string outputdir)
+        {
+            Directory.CreateDirectory(outputdir);
+            var reader = new ScmlReader(scmlpath);
+            reader.read(outputdir);
+            var writer = new ScmlWriter();
+            writer.Init(reader.BuildData, reader.BuildTable, reader.AnimData, reader.AnimHashes);
+            writer.Save(Path.Join(outputdir, reader.BuildData.Name + ".scml"));
+            // save all the sprites too
+            foreach (var sprite in reader.Sprites)
+            {
+                sprite.Bitmap.Save(Path.Join(outputdir, sprite.Name + ".png"), ImageFormat.Png);
+            }
         }
     }
 }

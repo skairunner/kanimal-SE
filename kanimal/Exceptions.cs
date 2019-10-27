@@ -31,4 +31,23 @@ namespace kanimal
             ActualHeader = actual;
         }
     }
+
+    public class SpriteParseException : KAnimalException
+    {
+        public string Filename { get; }
+        public SpriteParseException(string message, string filename)
+        : base(message)
+        {
+            Filename = filename;
+        }
+    }
+
+    public class ProjectParseException : KAnimalException
+    {
+        public ProjectParseException(string message)
+            : base(message)
+        {
+            
+        }
+    }
 }
