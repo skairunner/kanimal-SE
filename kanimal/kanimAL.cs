@@ -30,10 +30,11 @@ namespace kanimal
             
             Logger.Info("Writing...");
             var writer = new ScmlWriter();
-            writer.Init(reader.BuildData, reader.BuildTable, reader.AnimData, reader.AnimHashes);
+            writer.Init(reader);
             
             var outputFilePath = Path.Join(outputPath, $"{reader.BuildData.Name}.scml");
             writer.Save(outputFilePath);
+            writer.SaveFiles(outputPath);
             
             Logger.Info("Done.");
         }
@@ -44,13 +45,9 @@ namespace kanimal
             var reader = new ScmlReader(scmlpath);
             reader.read(outputdir);
             var writer = new ScmlWriter();
-            writer.Init(reader.BuildData, reader.BuildTable, reader.AnimData, reader.AnimHashes);
+            writer.Init(reader);
             writer.Save(Path.Join(outputdir, reader.BuildData.Name + ".scml"));
-            // save all the sprites too
-            foreach (var sprite in reader.Sprites)
-            {
-                sprite.Bitmap.Save(Path.Join(outputdir, sprite.Name + ".png"), ImageFormat.Png);
-            }
+            writer.SaveFiles(outputdir);
         }
     }
 }

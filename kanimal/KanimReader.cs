@@ -117,16 +117,20 @@ namespace kanimal
             BuildHashes = buildHashes;
         }
 
-        // Unpacks the spritesheet into individual sprites, written to the output directory
-        public void ExportTextures(string outputPath)
+        // Unpacks the spritesheet into individual sprites and stores in memory.
+        public void ExportTextures()
         {
+            Sprites = new List<Sprite>();
             foreach (var row in BuildTable)
             {
                 Logger.Debug($"{row.X1} {row.Height - row.Y1} {row.Width} {row.Height}    {image.Width} {image.Height}");
                 var sprite = image.Clone(new Rectangle((int) row.X1, (int)(image.Height - row.Y1), (int)row.Width, (int)row.Height),
                     image.PixelFormat);
-                var filename = $"{row.Name}_{row.Index}.png";
-                sprite.Save(Path.Join(outputPath, filename));
+                Sprites.Add(new Sprite
+                {
+                    Name = $"{row.Name}_{row.Index}",
+                    Bitmap = sprite
+                });
             }
         }
 
@@ -289,8 +293,8 @@ namespace kanimal
             Logger.Info("Parsing build data.");
             ReadBuildData();
             
-            Logger.Info("Exporting textures.");
-            ExportTextures(outputDir);
+            Logger.Info("Importing textures.");
+            ExportTextures();
             
             Logger.Info("Parsing animation data.");
             ReadAnimData();

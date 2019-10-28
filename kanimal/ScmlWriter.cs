@@ -16,12 +16,13 @@ namespace kanimal
         protected XmlElement SpriterRoot;
         protected XmlElement Entity;
         
-        public override void Init(KBuild.Build buildData, List<KBuild.Row> buildTable, KAnim.Anim animData, Dictionary<int, string> animHashes)
+        public override void Init(Reader reader)
         {
-            BuildData = buildData;
-            BuildTable = buildTable;
-            AnimData = animData;
-            AnimHashes = animHashes;
+            BuildData = reader.BuildData;
+            BuildTable = reader.BuildTable;
+            AnimData = reader.AnimData;
+            AnimHashes = reader.AnimHashes;
+            sprites = reader.Sprites;
         }
 
         public override void Save(string path)

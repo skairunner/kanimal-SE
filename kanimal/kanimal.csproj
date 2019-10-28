@@ -6,7 +6,4 @@
         <PackageReference Include="NLog" Version="4.6.7" />
         <PackageReference Include="System.Drawing.Common" Version="4.7.0-preview1.19504.10" />
     </ItemGroup>
-    <ItemGroup>
-      <ProjectReference Include="..\Priority Queue\Priority Queue.csproj" />
-    </ItemGroup>
 </Project>
