@@ -297,5 +297,10 @@ namespace kanimal
             Logger.Info("Parsing animation data.");
             ReadAnimData();
         }
+
+        public override Bitmap GetSpriteSheet()
+        {
+            return image;
+        }
     }
 }

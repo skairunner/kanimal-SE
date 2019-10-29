@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Drawing;
 
 namespace kanimal
 {
@@ -53,5 +54,7 @@ namespace kanimal
 
             BuildTable = buildTable;
         }
+
+        public abstract Bitmap GetSpriteSheet();
     }
 }

@@ -16,6 +16,7 @@ namespace kanimal_cli
     }
 
     // For ones with Output and Input specifiers
+    [Verb("convert", HelpText = "Convert between formats.")]
     class GenericOptions: ProgramOptions
     {
         [Option('I', "input-format", Required = true, HelpText = "The input format, from [kanim, scml]")]
@@ -28,14 +29,14 @@ namespace kanimal_cli
         public IEnumerable<string> Files { get; set; }
     }
 
-    [Verb("scml", HelpText = "Convert kanim to scml.")]
+    [Verb("scml", HelpText = "Convert kanim to scml. Convenience verb equivalent to 'convert -I kanim -O scml'.")]
     class KanimToScmlOptions: ProgramOptions
     {
         [Value(0)]
         public IEnumerable<string> Files { get; set; }
     }
 
-    [Verb("kanim", HelpText = "Convert scml to kanim.")]
+    [Verb("kanim", HelpText = "Convert scml to kanim. Convenience verb equivalent to 'convert -I scml -O kanim'.")]
     class ScmlToKanimOptions : ProgramOptions
     {
         [Value(0)]

@@ -80,6 +80,7 @@ namespace kanimal_cli
                         case "scml":
                             var scml = files.Find(path => path.EndsWith(".scml"));
                             reader = new ScmlReader(scml);
+                            reader.Read(o.OutputPath);
                             break;
                         case "kanim":
                             var png = files.Find(path => path.EndsWith(".png"));
@@ -97,7 +98,7 @@ namespace kanimal_cli
                             break;
                     }
                     
-                    Logger.Info($"Successfully read anim of format {o.InputFormat}.");
+                    Logger.Info($"Successfully read from format {o.InputFormat}.");
                     Logger.Info("Writing...");
                     
                     switch (o.OutputFormat)

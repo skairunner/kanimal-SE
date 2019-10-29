@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using NLog;
 
@@ -8,6 +10,7 @@ namespace kanimal
     public class KanimWriter: Writer
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private Bitmap spritesheet;
 
         public KanimWriter(Reader reader)
         {
@@ -17,10 +20,12 @@ namespace kanimal
             AnimData = reader.AnimData;
             AnimHashes = reader.AnimHashes;
             Sprites = reader.Sprites;
+            spritesheet = reader.GetSpriteSheet();
         }
         
         public override void Save(string path)
         {
+            Directory.CreateDirectory(path);
             using (var fs = new FileStream(Path.Join(path, $"{BuildData.Name}_build.bytes"), FileMode.Create))
             {
                 WriteBuild(fs);
@@ -29,6 +34,8 @@ namespace kanimal
             {
                 WriteAnim(fs);
             }
+            
+            spritesheet.Save(Path.Join(path, $"{BuildData.Name}.png"), ImageFormat.Png);
         }
 
         public void WriteBuild(Stream output)

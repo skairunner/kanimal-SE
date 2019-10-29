@@ -37,7 +37,8 @@ namespace kanimal
             var children = scml.GetElementsByTagName("folder")[0].ChildNodes.GetElements();
             foreach (var element in children)
             {
-                projectSprites[element.Attributes["name"].Value] = element;
+                var withoutExt = Utilities.WithoutExtension(element.Attributes["name"].Value);
+                projectSprites[withoutExt] = element;
                 projectFileIdMap[element.Attributes["id"].Value] = element;
             }
         }
@@ -67,14 +68,17 @@ namespace kanimal
             // and will otherwise fail
             textures.SpriteAtlas.Sort(
                 (sprite1, sprite2) => String.Compare(sprite1.Name, sprite2.Name, StringComparison.Ordinal));
-            
+
             // Once texture is packed. reads the atlas to determine build info
             PackBuild(textures);
-            
+
             Logger.Info("Calculating animation info.");
             PackAnim();
-            
-            Logger.Info($"Successfully read {scmlpath}");
+        }
+
+        public override Bitmap GetSpriteSheet()
+        {
+            return textures.SpriteSheet;
         }
 
         private void PackBuild(TexturePacker texture)
@@ -289,8 +293,7 @@ namespace kanimal
                         }
 
                         var object_node = frame_node.GetElementsByTagName("object")[0];
-                        try
-                        {
+                        
                             var image_node = projectFileIdMap[object_node.Attributes["file"].Value];
                             var imageName = image_node.Attributes["name"].Value;
                             if (imageName.EndsWith(".png"))
@@ -406,11 +409,6 @@ namespace kanimal
                             minY = Utilities.Min(minY, p1.Y, p2.Y, p3.Y, p4.Y);
                             frame.Elements.Add(element);
                             elementCount++;
-                        }
-                        catch (Exception e)
-                        {
-                            throw e;
-                        }
                     }
                     
                     frame.Elements.Sort((e1, e2) => -e1.ZIndex.CompareTo(e2.ZIndex));

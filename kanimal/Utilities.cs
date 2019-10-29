@@ -76,7 +76,15 @@ namespace kanimal
 
         public static string WithoutExtension(string name)
         {
-            return name.Substring(0, name.LastIndexOf(".", StringComparison.Ordinal));
+            var i = name.LastIndexOf(".", StringComparison.Ordinal);
+            if (i >= 0)
+            {
+                return name.Substring(0, i);
+            }
+            else
+            {
+                return name;
+            }
         }
 
         // depends on the filename being properly formatted

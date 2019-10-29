@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using kanimal;
 using NLog;
 using MaxRectsBinPack;
 
@@ -9,23 +10,22 @@ namespace kanimal
 {
     public class PackedSprite
     {
+        private Sprite sprite;
+        
         public PackedSprite(int x, int y, Sprite sprite)
         {
             X = x;
             Y = y;
-            Width = sprite.Width;
-            Height = sprite.Height;
-            Name = sprite.Name;
-            Sprite = sprite.Bitmap;
+            this.sprite = sprite;
         }
         
         public int X { get; }
         public int Y { get; }
-        public int Width { get; }
-        public int Height { get; }
-        public string Name { get; }
+        public int Width => sprite.Width;
+        public int Height => sprite.Height;
+        public string Name => sprite.Name;
         
-        public Bitmap Sprite { get; }
+        public Bitmap Sprite => sprite.Bitmap;
 
         public string BaseName => Utilities.GetSpriteBaseName(Name);
     }
@@ -91,15 +91,15 @@ namespace kanimal
                     sheet_w *= 2;
             }
 
-            using (Graphics grD = Graphics.FromImage(SpriteSheet))
+            using (var grD = Graphics.FromImage(SpriteSheet))
             {
                 foreach (var sprite in SpriteAtlas)
                 {
-                    grD.DrawImageUnscaled(sprite.Sprite,
+                    grD.DrawImage(sprite.Sprite,
                         new Rectangle(sprite.X, sprite.Y, sprite.Width, sprite.Height));
                 } 
             }
-            Logger.Debug($"Packed {sheet_w} x {sheet_h}");
+            Logger.Info($"Packed {sheet_w} x {sheet_h}");
         }
 
         // returns false when the packing failed. 

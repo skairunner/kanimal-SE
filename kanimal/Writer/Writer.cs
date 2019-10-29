@@ -17,6 +17,7 @@ namespace kanimal
         protected Dictionary<int, string> AnimHashes;
         protected Dictionary<string, string> FilenameIndex;
         protected List<Sprite> Sprites;
+        protected Reader reader;
 
         public abstract void Save(string path);
         
