@@ -22,6 +22,7 @@ namespace kanimal
         private string scmlpath;
         private Dictionary<string, XmlElement> projectSprites; // quick lookup for the sprites incl in project
         private Dictionary<string, XmlElement> projectFileIdMap; // quick lookup for the anims incl in project
+        private TexturePacker textures;
 
         public ScmlReader(string scmlpath)
         {
@@ -41,7 +42,7 @@ namespace kanimal
             }
         }
         
-        public override void read(string outputDir)
+        public override void Read(string outputDir)
         {
             scml = new XmlDocument();
             scml.Load(scmlpath);
@@ -61,7 +62,7 @@ namespace kanimal
             Sprites = sprites.Select(sprite => new Sprite {Bitmap = sprite.Item2, Name = sprite.Item1}).ToList();
             
             Logger.Info("Reading build info.");
-            var textures = new TexturePacker(sprites);
+            textures = new TexturePacker(sprites);
             // Sort packed sprites by name to facilitate build packing later on, bc it has flaky logic
             // and will otherwise fail
             textures.SpriteAtlas.Sort(

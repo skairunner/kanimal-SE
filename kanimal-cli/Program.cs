@@ -33,6 +33,13 @@ namespace kanimal_cli
         public string ScmlFile { get; set; }
     }
     
+    [Verb("Kanim", HelpText = "Convert kanim to kanim.")]
+    class KanimToKAnimOptions : ProgramOptions
+    {
+        [Value(0)]
+        public IEnumerable<string> Files { get; set; }
+    }
+    
     class Program
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
@@ -66,7 +73,7 @@ namespace kanimal_cli
         
         static void Main(string[] args)
         {
-            Parser.Default.ParseArguments<KanimToScmlOptions, ScmlToKanimOptions>(args)
+            Parser.Default.ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, KanimToKAnimOptions>(args)
                 .WithParsed<KanimToScmlOptions>(o =>
                 {
                     SetVerbosity(o);
@@ -75,20 +82,35 @@ namespace kanimal_cli
                     var png = files.Find(path => path.EndsWith(".png"));
                     var build = files.Find(path => path.EndsWith("build.bytes"));
                     var anim = files.Find(path => path.EndsWith("anim.bytes"));
-                    
+
                     Kanimal.ToScml(
-                    png,
-                    build,
-                    anim,
-                    o.OutputPath);
+                        png,
+                        build,
+                        anim,
+                        o.OutputPath);
                 })
                 .WithParsed<ScmlToKanimOptions>(options =>
                 {
                     SetVerbosity(options);
 
                     var file = options.ScmlFile;
-                    
+
                     Kanimal.ScmlToScml(file, options.OutputPath);
+                })
+                .WithParsed<KanimToKAnimOptions>(o =>
+                {
+                    SetVerbosity(o);
+
+                    var files = new List<string>(o.Files);
+                    var png = files.Find(path => path.EndsWith(".png"));
+                    var build = files.Find(path => path.EndsWith("build.bytes"));
+                    var anim = files.Find(path => path.EndsWith("anim.bytes"));
+
+                    Kanimal.KanimToKAnim(
+                        png,
+                        build,
+                        anim,
+                        o.OutputPath);
                 });
         }
     }

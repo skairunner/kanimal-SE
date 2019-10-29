@@ -16,8 +16,6 @@ namespace kanimal
         private Bitmap image;
         private Dictionary<string, int> AnimIdMap;
 
-        private bool bildParsed = false, animParsed = false;
-
         public KanimReader(Stream bild, Stream anim, Stream img)
         {
             this.bild = bild;
@@ -288,7 +286,7 @@ namespace kanimal
         }
 
         // TODO: Include images into the in-memory format & remove outputdir arg for something better
-        public override void read(string outputDir)
+        public override void Read(string outputDir)
         {
             Logger.Info("Parsing build data.");
             ReadBuildData();

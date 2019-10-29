@@ -12,18 +12,19 @@ namespace kanimal
 
         protected List<KBuild.Row> BuildTable;
         protected KBuild.Build BuildData;
+        protected Dictionary<int, string> BuildHashes;
         protected KAnim.Anim AnimData;
         protected Dictionary<int, string> AnimHashes;
         protected Dictionary<string, string> FilenameIndex;
-        protected List<Sprite> sprites;
+        protected List<Sprite> Sprites;
 
         public abstract void Save(string path);
         
         // Outputs sprites to the output directory rather than doing anything else with them. 
-        public void SaveFiles(string outputdir)
+        public void SaveSprites(string outputdir)
         {
             Directory.CreateDirectory(outputdir);
-            foreach (var sprite in sprites)
+            foreach (var sprite in Sprites)
             {
                 sprite.Bitmap.Save(Path.Join(outputdir, sprite.Name + ".png"), ImageFormat.Png);
             }

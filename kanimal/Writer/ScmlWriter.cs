@@ -20,9 +20,10 @@ namespace kanimal
         {
             BuildData = reader.BuildData;
             BuildTable = reader.BuildTable;
+
             AnimData = reader.AnimData;
             AnimHashes = reader.AnimHashes;
-            sprites = reader.Sprites;
+            Sprites = reader.Sprites;
         }
 
         public override void Save(string path)

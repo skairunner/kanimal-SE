@@ -18,7 +18,7 @@ namespace kanimal
 
         // Read the file at the given path and populate the above data entries.
         // Sprites are output at the directory.
-        public abstract void read(string outputDir);
+        public abstract void Read(string outputDir);
         
         // Build the table by reading from hashTable and buildData
         public void BuildBuildTable(int imgW, int imgH)
