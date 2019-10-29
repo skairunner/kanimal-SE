@@ -29,8 +29,7 @@ namespace kanimal
             reader.read(outputPath);
             
             Logger.Info("Writing...");
-            var writer = new ScmlWriter();
-            writer.Init(reader);
+            var writer = new ScmlWriter(reader);
             
             var outputFilePath = Path.Join(outputPath, $"{reader.BuildData.Name}.scml");
             writer.Save(outputFilePath);
@@ -44,8 +43,7 @@ namespace kanimal
             Directory.CreateDirectory(outputdir);
             var reader = new ScmlReader(scmlpath);
             reader.read(outputdir);
-            var writer = new ScmlWriter();
-            writer.Init(reader);
+            var writer = new ScmlWriter(reader);
             writer.Save(Path.Join(outputdir, reader.BuildData.Name + ".scml"));
             writer.SaveFiles(outputdir);
         }

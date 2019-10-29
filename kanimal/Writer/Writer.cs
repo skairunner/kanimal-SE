@@ -17,8 +17,6 @@ namespace kanimal
         protected Dictionary<string, string> FilenameIndex;
         protected List<Sprite> sprites;
 
-        public abstract void Init(Reader reader);
-
         public abstract void Save(string path);
         
         // Outputs sprites to the output directory rather than doing anything else with them. 

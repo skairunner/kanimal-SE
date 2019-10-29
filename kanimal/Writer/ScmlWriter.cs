@@ -16,7 +16,7 @@ namespace kanimal
         protected XmlElement SpriterRoot;
         protected XmlElement Entity;
         
-        public override void Init(Reader reader)
+        public ScmlWriter(Reader reader)
         {
             BuildData = reader.BuildData;
             BuildTable = reader.BuildTable;
