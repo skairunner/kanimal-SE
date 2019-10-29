@@ -10,11 +10,6 @@ namespace kanimal
         
         public static void ToScml(string imgPathStr, string buildPathStr, string animPathStr, string outputDir)
         {
-            if (!BitConverter.IsLittleEndian)
-            {
-                Logger.Warn("You are on an operating system that uses big endian byte ordering. kanimAL results may not be correct.");
-            }
-            
             var outputPath = Path.GetFullPath(outputDir);
             // Ensure output dirs exist
             Directory.CreateDirectory(outputPath);
@@ -25,12 +20,12 @@ namespace kanimal
                 new FileStream(buildPathStr, FileMode.Open), 
                 new FileStream(animPathStr, FileMode.Open),
                 new FileStream(imgPathStr, FileMode.Open));
-            
+
             reader.read(outputPath);
-            
+
             Logger.Info("Writing...");
             var writer = new ScmlWriter(reader);
-            
+
             var outputFilePath = Path.Join(outputPath, $"{reader.BuildData.Name}.scml");
             writer.Save(outputFilePath);
             writer.SaveFiles(outputPath);
