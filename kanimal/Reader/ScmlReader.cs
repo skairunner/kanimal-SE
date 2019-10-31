@@ -220,6 +220,9 @@ namespace kanimal
             var Entity = scml.GetElementsByTagName("entity")[0];
             var animations = Entity.ChildNodes.GetElements();
             var animCount = 0;
+            bool hasInconsistentIntervals = false;
+            var InconsistentAnims = new HashSet<string>();
+
             foreach (var anim in animations)
             {
                 animCount++;
@@ -233,15 +236,9 @@ namespace kanimal
                 bank.Name = anim.Attributes["name"].Value;
                 bank.Hash = reverseHash[bank.Name];
                 Logger.Debug($"bank.name={bank.Name}\nhashTable={bank.Hash}");
-                
-                // weirdly feeble attempt at parsing the interval, leaving it in
-                if (!int.TryParse(anim.Attributes["interval"].Value, out var interval))
-                {
-                    interval = 33;
-                }
-
-                bank.Rate = (float)Utilities.MS_PER_S / interval;
                 bank.Frames = new List<KAnim.Frame>();
+
+                var interval = -1;
 
                 var timelines = anim.ChildNodes;
                 var mainline = GetMainline(timelines);
@@ -249,9 +246,38 @@ namespace kanimal
                 var keyframes = mainline.ChildNodes.GetElements();
                 var lastDataMap = new Dictionary<int, AnimationData>();
                 var frameCount = 0;
+                var lastFrameTime = -1;
                 foreach (var frameNode in keyframes)
                 {
                     frameCount++;
+
+                    // we are attempting to calculate the interval. The first valid interval will be the "gold standard"
+                    // by which all other intervals will be judged by. Note that different anims can have different 
+                    // intervals.
+                    if (lastFrameTime != -1)
+                    {
+                        var this_interval = int.Parse(frameNode.Attributes["time"].Value) - lastFrameTime;
+                        if (interval == -1)
+                        {
+                            // it's not initialized, so init
+                            interval = this_interval;
+                        }
+                        else
+                        {
+                            // otherwise, verify that the interval is correct
+                            if (interval != this_interval)
+                            {
+                                Logger.Warn($"While parsing animation \"{bank.Name}\", found inconsistent interval at keyframe {frameCount}: it is {this_interval} ms from the last frame, when {interval} ms was expected.");
+                                hasInconsistentIntervals = true;
+                                InconsistentAnims.Add(bank.Name);
+                            }
+                        }
+                    }
+
+                    if (frameNode.Attributes["time"] == null)
+                        lastFrameTime = 0; // if no time is specified, implied to be 0
+                    else
+                        lastFrameTime = int.Parse(frameNode.Attributes["time"].Value);
                     
                     // that will be sent to klei kanim format so we have to match the timeline data to key frames
                     // - this matching will be the part for
@@ -439,7 +465,15 @@ namespace kanimal
                 }
 
                 bank.FrameCount = frameCount;
+                bank.Rate = (float)Utilities.MS_PER_S / interval;
                 AnimData.Anims.Add(bank);
+            }
+
+            if (hasInconsistentIntervals)
+            {
+                var anims = InconsistentAnims.ToList().Join();
+                throw new ProjectParseException(
+                    $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.");
             }
 
             AnimData.AnimCount = animCount;

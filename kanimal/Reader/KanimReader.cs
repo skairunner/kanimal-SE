@@ -102,7 +102,7 @@ namespace kanimal
                         Time = time
                     };
                     Utilities.LogToDump(
-                        $"    Frame {frame.SourceFrameNum}: image {frame.BuildImageIndex} for {frame.Duration} ms, BB ({frame.X1}, {frame.Y1}) - ({frame.X2}, {frame.Y2}), pivot ({frame.PivotX},{frame.PivotY})", Logger);
+                        $"    Frame {frame.SourceFrameNum}: image {frame.BuildImageIndex} for duration {frame.Duration}, BB ({frame.X1}, {frame.Y1}) - ({frame.X2}, {frame.Y2}), pivot ({frame.PivotX},{frame.PivotY})", Logger);
                     time += frame.Duration;
                     symbol.Frames.Add(frame);
                 }
