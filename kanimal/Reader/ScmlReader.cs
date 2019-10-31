@@ -97,30 +97,30 @@ namespace kanimal
             foreach (var sprite in texture.SpriteAtlas)
             {
                 // Only add each unique symbol once
-                if (lastName != sprite.Name)
+                if (lastName != sprite.BaseName)
                 {
                     var symbol = new KBuild.Symbol();
                     // The hash table caches a KleiHash translation of all sprites.
                     // It may be unnecessary but the original had it, and I don't know if the performance impact is
                     // small enough to remove it.
-                    if (!hashTable.ContainsKey(sprite.Name))
+                    if (!hashTable.ContainsKey(sprite.BaseName))
                     {
-                        hashTable[sprite.Name] = Utilities.KleiHash(sprite.Name);
+                        hashTable[sprite.BaseName] = Utilities.KleiHash(sprite.BaseName);
                     }
 
-                    symbol.Hash = hashTable[sprite.Name];
+                    symbol.Hash = hashTable[sprite.BaseName];
                     symbol.Path = symbol.Hash;
                     symbol.Color = 0; // no Klei files use color other than 0 so fair assumption is it can be 0
                     // only check in decompile for flag checks flag = 8 for a layered anim (which we won't do)
                     // so should be safe to leave flags = 0
                     // have seen some Klei files in which flags = 1 for some symbols but can't determine what that does
                     symbol.Flags = 0;
-                    symbol.FrameCount = histogram[sprite.Name];
+                    symbol.FrameCount = histogram[sprite.BaseName];
                     symbol.Frames = new List<KBuild.Frame>();
                     BuildData.Symbols.Add(symbol);
 
                     symbolIndex++;
-                    lastName = sprite.Name;
+                    lastName = sprite.BaseName;
                 }
 
                 KBuild.Frame frame = new KBuild.Frame();
@@ -131,12 +131,10 @@ namespace kanimal
                 // this value as read from the file is unused by Klei code and all example files have it set to 0 for all symbols
                 frame.BuildImageIndex = 0;
                 
-                // ReSharper disable PossibleLossOfFraction
-                frame.X1 = sprite.X / texture.SpriteSheet.Width;
-                frame.X2 = (sprite.X + sprite.Width) / texture.SpriteSheet.Width;
-                frame.Y1 = sprite.Y / texture.SpriteSheet.Height;
-                frame.Y2 = (sprite.Y + sprite.Height) / texture.SpriteSheet.Height;
-                // ReSharper restore PossibleLossOfFraction
+                frame.X1 = (float)sprite.X / texture.SpriteSheet.Width;
+                frame.X2 = (float)(sprite.X + sprite.Width) / texture.SpriteSheet.Width;
+                frame.Y1 = (float)sprite.Y / texture.SpriteSheet.Height;
+                frame.Y2 = (float)(sprite.Y + sprite.Height) / texture.SpriteSheet.Height;
                 
                 // do not set frame.time since it was a calculated property and not actually used in kbild
                 frame.PivotWidth = sprite.Width * 2;
@@ -153,7 +151,7 @@ namespace kanimal
             BuildHashes = new Dictionary<int, string>();
             foreach (var entry in hashTable)
             {
-                BuildHashes[entry.Value] = Utilities.GetSpriteBaseName(entry.Key);
+                BuildHashes[entry.Value] = entry.Key;
             }
             
             BuildBuildTable(texture.SpriteSheet.Width, texture.SpriteSheet.Height);
@@ -185,6 +183,21 @@ namespace kanimal
             return map;
         }
 
+        private void PopulateHashTableWithAnimations()
+        {
+            var entity = scml.GetElementsByTagName("entity")[0];
+            foreach (var animation in entity.ChildNodes.GetElements())
+            {
+                if (animation.Name != "animation")
+                {
+                    throw new ProjectParseException($"SCML format exception: all children of <entity> should be <animation>, but was <{animation.Name}> instead.");
+                }
+
+                var animName = animation.Attributes["name"].Value;
+                AnimHashes[Utilities.KleiHash(animName)] = animName;
+            }
+        }
+        
         private void PackAnim()
         {
             AnimData = new KAnim.Anim();
@@ -194,6 +207,15 @@ namespace kanimal
             
             // reading the scml to get the data you get by counting everything
             SetAggregateData();
+            
+            // anim names need to go into animhash as well
+            PopulateHashTableWithAnimations();
+
+            var reverseHash = new Dictionary<string, int>();
+            foreach (var entry in AnimHashes)
+            {
+                reverseHash[entry.Value] = entry.Key;
+            }
             
             var Entity = scml.GetElementsByTagName("entity")[0];
             var animations = Entity.ChildNodes.GetElements();
@@ -209,7 +231,7 @@ namespace kanimal
 
                 var bank = new KAnim.AnimBank();
                 bank.Name = anim.Attributes["name"].Value;
-                bank.Hash = Utilities.KleiHash(bank.Name);
+                bank.Hash = reverseHash[bank.Name];
                 Logger.Debug($"bank.name={bank.Name}\nhashTable={bank.Hash}");
                 
                 // weirdly feeble attempt at parsing the interval, leaving it in
@@ -221,9 +243,9 @@ namespace kanimal
                 bank.Rate = (float)Utilities.MS_PER_S / interval;
                 bank.Frames = new List<KAnim.Frame>();
 
-                var timelines = anim.ChildNodes.GetElements();
-                var mainline = GetMainline(anim.ChildNodes);
-                var timelineMap = GetTimelineMap(anim.ChildNodes);
+                var timelines = anim.ChildNodes;
+                var mainline = GetMainline(timelines);
+                var timelineMap = GetTimelineMap(timelines);
                 var keyframes = mainline.ChildNodes.GetElements();
                 var lastDataMap = new Dictionary<int, AnimationData>();
                 var frameCount = 0;
@@ -296,10 +318,6 @@ namespace kanimal
                         
                             var image_node = projectFileIdMap[object_node.Attributes["file"].Value];
                             var imageName = image_node.Attributes["name"].Value;
-                            if (imageName.EndsWith(".png"))
-                            {
-                                imageName = imageName.Substring(0, imageName.Length - 4);
-                            }
 
                             element.Image = Utilities.KleiHash(Utilities.GetSpriteBaseName(imageName));
                             element.Index = Utilities.GetFrameCount(imageName);

@@ -15,6 +15,13 @@ namespace kanimal_cli
         public string OutputPath { get; set; } = "output";
     }
 
+    [Verb("dump", HelpText = "Output a dump of the specified kanim.")]
+    class DumpOptions : ProgramOptions
+    {
+        [Value(0)]
+        public IEnumerable<string> Files { get; set; }
+    }
+
     // For ones with Output and Input specifiers
     [Verb("convert", HelpText = "Convert between formats.")]
     class GenericOptions: ProgramOptions

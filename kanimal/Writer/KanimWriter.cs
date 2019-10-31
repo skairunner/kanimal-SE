@@ -84,6 +84,8 @@ namespace kanimal
                 writer.Write(entry.Key);
                 writer.WritePString(entry.Value);
             }
+            
+            Logger.Debug("=== end build ===");
         }
 
         public void WriteAnim(Stream output)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using NLog;
@@ -142,6 +143,14 @@ namespace kanimal
             }
 
             return max;
+        }
+
+        // As Logger.Debug, but also prints to a special dump stream, if specified
+        public static TextWriter dump = null;
+        public static void LogToDump(string str, Logger logger)
+        {
+            logger.Debug(str);
+            dump?.WriteLine(str);
         }
     }
 }

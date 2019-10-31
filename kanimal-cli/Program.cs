@@ -43,7 +43,7 @@ namespace kanimal_cli
         
         static void Main(string[] args)
         {
-            Parser.Default.ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, GenericOptions>(args)
+            Parser.Default.ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, GenericOptions, DumpOptions>(args)
                 .WithParsed<KanimToScmlOptions>(o =>
                 {
                     SetVerbosity(o);
@@ -59,13 +59,31 @@ namespace kanimal_cli
                         anim,
                         o.OutputPath);
                 })
+                .WithParsed<DumpOptions>(o =>
+                {
+                    SetVerbosity(o);
+
+                    var files = new List<string>(o.Files);
+                    var png = files.Find(path => path.EndsWith(".png"));
+                    var build = files.Find(path => path.EndsWith("build.bytes"));
+                    var anim = files.Find(path => path.EndsWith("anim.bytes"));
+
+                    Directory.CreateDirectory(o.OutputPath);
+                    Utilities.dump = new StreamWriter(new FileStream(Path.Join(o.OutputPath, "dump.log"), FileMode.Create));
+                    var reader = new KanimReader(
+                        new FileStream(build, FileMode.Open),
+                        new FileStream(anim, FileMode.Open), 
+                        new FileStream(png, FileMode.Open));
+                    reader.Read(o.OutputPath);
+                    Utilities.dump.Flush();
+                })
                 .WithParsed<ScmlToKanimOptions>(options =>
                 {
                     SetVerbosity(options);
 
                     var file = options.ScmlFile;
 
-                    Kanimal.ScmlToScml(file, options.OutputPath);
+                    Kanimal.ToKanim(file, options.OutputPath);
                 })
                 .WithParsed<GenericOptions>(o =>
                 {

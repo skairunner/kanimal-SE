@@ -4,6 +4,7 @@ using System.IO;
 using System.Drawing;
 using System.Text;
 using NLog;
+using NLog.Fluent;
 
 namespace kanimal
 {
@@ -20,7 +21,7 @@ namespace kanimal
         {
             this.bild = bild;
             this.anim = anim;
-            this.image = new Bitmap(img);
+            image = new Bitmap(img);
         }
 
         // Reads the entire build.bytes file
@@ -59,7 +60,15 @@ namespace kanimal
                 Name = reader.ReadPString(),
                 Symbols = new List<KBuild.Symbol>()
             };
-
+            Utilities.LogToDump(
+                "=== BUILD FILE ===\n" +
+                $"{buildData.Name}\n" + 
+                $"  Version: {buildData.Version}\n" +
+                $"  # symbols: {buildData.SymbolCount}\n" +
+                $"  # frames: {buildData.FrameCount}", Logger);
+            Utilities.LogToDump(
+                "\n<Symbols>"
+                , Logger);
             for (int i = 0; i < buildData.SymbolCount; i++)
             {
                 var symbol = new KBuild.Symbol
@@ -71,6 +80,8 @@ namespace kanimal
                     FrameCount = reader.ReadInt32(),
                     Frames = new List<KBuild.Frame>()
                 };
+                Utilities.LogToDump(
+                    $"  Symbol: hash {symbol.Hash}, path {symbol.Path}, frame count {symbol.FrameCount}", Logger);
 
                 int time = 0;
                 for (int j = 0; j < symbol.FrameCount; j++)
@@ -90,6 +101,8 @@ namespace kanimal
                         Y2 = reader.ReadSingle(),
                         Time = time
                     };
+                    Utilities.LogToDump(
+                        $"    Frame {frame.SourceFrameNum}: image {frame.BuildImageIndex} for {frame.Duration} ms, BB ({frame.X1}, {frame.Y1}) - ({frame.X2}, {frame.Y2}), pivot ({frame.PivotX},{frame.PivotY})", Logger);
                     time += frame.Duration;
                     symbol.Frames.Add(frame);
                 }
@@ -105,10 +118,12 @@ namespace kanimal
         {
             var buildHashes = new Dictionary<int, string>();
             var numHashes = reader.ReadInt32();
+            Utilities.LogToDump($"\n<Hashtable {numHashes}>", Logger);
             for (int i = 0; i < numHashes; i++)
             {
                 var hash = reader.ReadInt32();
                 var str = reader.ReadPString();
+                Utilities.LogToDump($"  {hash} -> \"{str}\"", Logger);
                 buildHashes[hash] = str;
             }
 
@@ -118,11 +133,13 @@ namespace kanimal
         // Unpacks the spritesheet into individual sprites and stores in memory.
         public void ExportTextures()
         {
+            Utilities.LogToDump("\n\n=== SPRITE SHEET ===", Logger);
             Sprites = new List<Sprite>();
             foreach (var row in BuildTable)
             {
-                Logger.Debug($"{row.X1} {row.Height - row.Y1} {row.Width} {row.Height}    {image.Width} {image.Height}");
-                var sprite = image.Clone(new Rectangle((int) row.X1, (int)(image.Height - row.Y1), (int)row.Width, (int)row.Height),
+                var y = (int)(image.Height - row.Y1);
+                Utilities.LogToDump($"  Sprite \"{row.Name}_{row.Index}\" @ {row.X1} {y}, {row.Width}x{row.Height}", Logger);
+                var sprite = image.Clone(new Rectangle((int) row.X1, y, (int)row.Width, (int)row.Height),
                     image.PixelFormat);
                 Sprites.Add(new Sprite
                 {
@@ -147,6 +164,7 @@ namespace kanimal
                 Environment.Exit((int)ExitCodes.IncorrectHeader);
             }
 
+            Utilities.LogToDump("\n\n=== ANIM FILE ===", Logger);
             ParseAnims(reader);
             ReadAnimHashes(reader);
             ReadAnimIds();
@@ -166,12 +184,18 @@ namespace kanimal
                 AnimCount = reader.ReadInt32(),
                 Anims = new List<KAnim.AnimBank>()
             };
+            
+            Utilities.LogToDump(
+                $"  Version: {animData.Version}\n" + 
+                $"  # elements: {animData.ElementCount}\n" + 
+                $"  # frames: {animData.FrameCount}\n" +
+                $"  # anims: {animData.AnimCount}\n" +
+                "\n<Anims>", Logger);
 
             for (int i = 0; i < animData.AnimCount; i++)
             {
                 var name = reader.ReadPString();
                 var hash = reader.ReadInt32();
-                Logger.Debug($"anim with name={name} but hash={hash}");
                 var bank = new KAnim.AnimBank
                 {
                     Name = name,
@@ -180,6 +204,8 @@ namespace kanimal
                     FrameCount = reader.ReadInt32(),
                     Frames = new List<KAnim.Frame>()
                 };
+                
+                Utilities.LogToDump($"  Anim \"{bank.Name}\" (hash {bank.Hash}): {bank.FrameCount} frames @ {bank.Rate} fps", Logger);
 
                 for (int j = 0; j < bank.FrameCount; j++)
                 {
@@ -192,7 +218,7 @@ namespace kanimal
                         ElementCount = reader.ReadInt32(),
                         Elements = new List<KAnim.Element>()
                     };
-                    Logger.Debug($"animation frame=({frame.X},{frame.Y},{frame.Width},{frame.Height}");
+                    Utilities.LogToDump($"    Frame @ ({frame.X}, {frame.Y}) is {frame.Width}x{frame.Height}. {frame.ElementCount} sub-elements.", Logger);
 
                     for (int k = 0; k < frame.ElementCount; k++)
                     {
@@ -214,14 +240,13 @@ namespace kanimal
                             M6 = reader.ReadSingle(),
                             Order = reader.ReadSingle()
                         };
-                        
-                        Logger.Debug($"internal=({element.M5},{element.M6})");
-                        Logger.Debug($"layer={element.Layer}");
+                        Utilities.LogToDump(
+                            $"      Sub-element #{element.Index} is {element.Image} (\"{BuildHashes[element.Image]}\") @ layer {element.Layer}\n" +
+                            $"        Matrix: ({element.M1} {element.M2} {element.M3} {element.M4}), translate {element.M5} {element.M6}. Order {element.Order}", Logger);
 
                         frame.Elements.Add(element);
                     }
                     
-                    Logger.Debug("");
                     bank.Frames.Add(frame);
                 }
 
@@ -229,6 +254,7 @@ namespace kanimal
             }
 
             animData.MaxVisibleSymbolFrames = reader.ReadInt32();
+            Utilities.LogToDump($"  Max visible frames: {animData.MaxVisibleSymbolFrames}", Logger);
 
             AnimData = animData;
         }
@@ -238,10 +264,12 @@ namespace kanimal
             var animHashes = new Dictionary<int, string>();
 
             int numHashes = reader.ReadInt32();
+            Utilities.LogToDump($"\n<Anim hashes {numHashes}>", Logger);
             for (int i = 0; i < numHashes; i++)
             {
                 var hash = reader.ReadInt32();
                 var text = reader.ReadPString();
+                Utilities.LogToDump($"  {hash} -> \"{text}\"", Logger);
                 animHashes[hash] = text;
             }
 
@@ -251,7 +279,8 @@ namespace kanimal
         private void ReadAnimIds()
         {
             var animIdMap = new Dictionary<string, int>();
-
+            
+            Utilities.LogToDump("\n<Anim ids>", Logger);
             var key = 0;
             foreach (var bank in AnimData.Anims)
             {
@@ -263,6 +292,7 @@ namespace kanimal
                         if (!animIdMap.ContainsKey(name))
                         {
                             animIdMap[name] = key;
+                            Utilities.LogToDump($"  {key} -> \"{name}\"", Logger);
                             key += 1;
                         }
                     }

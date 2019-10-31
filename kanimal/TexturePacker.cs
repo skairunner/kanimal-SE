@@ -63,13 +63,14 @@ namespace kanimal
             var histogram = new Dictionary<string, int>();
             foreach (var entry in SpriteAtlas)
             {
-                if (histogram.ContainsKey(entry.Name))
+                var baseName = Utilities.GetSpriteBaseName(entry.Name);
+                if (histogram.ContainsKey(baseName))
                 {
-                    histogram[entry.Name] += 1;
+                    histogram[baseName] += 1;
                 }
                 else
                 {
-                    histogram[entry.Name] = 1;
+                    histogram[baseName] = 1;
                 }
             }
 

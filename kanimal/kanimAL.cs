@@ -33,6 +33,17 @@ namespace kanimal
             Logger.Info("Done.");
         }
 
+        public static void ToKanim(string projectStr, string outputDir)
+        {
+            Directory.CreateDirectory(outputDir);
+            
+            Logger.Info($"Output path is \"{outputDir}\"");
+            var reader = new ScmlReader(projectStr);
+            reader.Read(outputDir);
+            var writer = new KanimWriter(reader);
+            writer.Save(outputDir);
+        }
+
         public static void ScmlToScml(string scmlpath, string outputdir)
         {
             Directory.CreateDirectory(outputdir);
