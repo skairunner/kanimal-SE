@@ -18,7 +18,7 @@ namespace kanimal_cli
         { 
             var config = new NLog.Config.LoggingConfiguration();
             var logconsole = new NLog.Targets.ConsoleTarget("logconsole");
-            logconsole.Layout = "${message}";
+            logconsole.Layout = "[${level}] ${message}";
 
             if (o.Verbose && o.Silent)
             {
@@ -118,12 +118,14 @@ namespace kanimal_cli
                     
                     Logger.Info($"Successfully read from format {o.InputFormat}.");
                     Logger.Info("Writing...");
+
+                    Directory.CreateDirectory(o.OutputPath);
                     
                     switch (o.OutputFormat)
                     {
                         case "scml":
                             var scmlwriter = new ScmlWriter(reader);
-                            scmlwriter.Save(o.OutputPath);
+                            scmlwriter.Save(Path.Join(o.OutputPath, $"{reader.BuildData.Name}.scml"));
                             scmlwriter.SaveSprites(o.OutputPath);
                             break;
                         case "kanim":
