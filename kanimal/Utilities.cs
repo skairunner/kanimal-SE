@@ -152,5 +152,19 @@ namespace kanimal
             logger.Debug(str);
             dump?.WriteLine(str);
         }
+
+        // Given value v1 at t1, and value v2 at t2, linearly interpolates (lerps)
+        // the value at t.
+        // Assumes that t1 <= t <= t2.
+        public static float Interpolate(float t1, float v1, float t, float t2, float v2)
+        {
+            // translate down. t1 is now 0.
+            t -= t1;
+            t2 -= t1;
+            // find what fraction t is on a scale of 0 to t2.
+            t /= t2;
+            // return the value.
+            return v1 * (1 - t) + v2 * t;
+        }
     }
 }

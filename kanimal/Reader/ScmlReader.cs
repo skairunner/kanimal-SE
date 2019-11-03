@@ -242,12 +242,15 @@ namespace kanimal
 
                 var timelines = anim.ChildNodes;
                 var mainline = GetMainline(timelines);
+                // Build a temporary index of object id to list of frame times.
+                
+                
                 var timelineMap = GetTimelineMap(timelines);
-                var keyframes = mainline.ChildNodes.GetElements();
+                var mainline_keys = mainline.ChildNodes.GetElements();
                 var lastDataMap = new Dictionary<int, AnimationData>();
                 var frameCount = 0;
                 var lastFrameTime = -1;
-                foreach (var frameNode in keyframes)
+                foreach (var mainline_key in mainline_keys)
                 {
                     frameCount++;
 
@@ -256,7 +259,7 @@ namespace kanimal
                     // intervals.
                     if (lastFrameTime != -1)
                     {
-                        var this_interval = int.Parse(frameNode.Attributes["time"].Value) - lastFrameTime;
+                        var this_interval = int.Parse(mainline_key.Attributes["time"].Value) - lastFrameTime;
                         if (interval == -1)
                         {
                             // it's not initialized, so init
@@ -274,14 +277,14 @@ namespace kanimal
                         }
                     }
 
-                    if (frameNode.Attributes["time"] == null)
+                    if (mainline_key.Attributes["time"] == null)
                         lastFrameTime = 0; // if no time is specified, implied to be 0
                     else
-                        lastFrameTime = int.Parse(frameNode.Attributes["time"].Value);
+                        lastFrameTime = int.Parse(mainline_key.Attributes["time"].Value);
                     
                     // that will be sent to klei kanim format so we have to match the timeline data to key frames
                     // - this matching will be the part for
-                    if (frameNode.Name != "key")
+                    if (mainline_key.Name != "key")
                     {
                         throw new ProjectParseException(
                             $"SCML format exception: all children of <animation> must be <key>, was <{anim.Name}> instead.");
@@ -305,10 +308,12 @@ namespace kanimal
                     // look through object refs - will need to maintain list of object refs
                     // because in the end it must be sorted in accordance with the z-index
                     // before appended in correct order to elementsList
-                    var object_refs = frameNode.ChildNodes.GetElements();
+                    var object_refs = mainline_key.ChildNodes.GetElements().ToList();
                     var elementCount = 0;
-                    foreach (var object_ref in object_refs)
+                    for (var i = 0; i < object_refs.Count; i++)
                     {
+                        var object_ref = object_refs[i];
+
                         if (object_ref.Name != "object_ref")
                         {
                             throw new ProjectParseException(
@@ -330,6 +335,12 @@ namespace kanimal
                         
                         // now need to get corresponding timeline object ref
                         var timeline_node = timelineMap[timeline_id];
+                        // unwrap the <timeline><key> to get the <object> tags.
+                        var timeline_keys = timeline_node
+                            .ChildNodes
+                            .GetElements()
+                            .ToArray();
+
                         var frame_id = int.Parse(object_ref.Attributes["key"].Value);
                         XmlElement frame_node;
                         try
@@ -337,12 +348,13 @@ namespace kanimal
                             frame_node = getFrameFromTimeline(timeline_node, frame_id);
                         } catch (ProjectParseException)
                         {
+                            Logger.Warn($"Could not find frame {frame_id} in timeline {timeline_id} of anim \"{bank.Name}\"!");
                             continue; // skip this element.
                         }
 
-                        var object_node = frame_node.GetElementsByTagName("object")[0];
+                        var frame_object_node = frame_node.GetElementsByTagName("object")[0];
                         
-                            var image_node = projectFileIdMap[object_node.Attributes["file"].Value];
+                            var image_node = projectFileIdMap[frame_object_node.Attributes["file"].Value];
                             var imageName = image_node.Attributes["name"].Value;
 
                             element.Image = Utilities.KleiHash(Utilities.GetSpriteBaseName(imageName));
@@ -360,51 +372,52 @@ namespace kanimal
                             // that if we don't see it
                             // TODO: Spriter actually interpolates values as well, so we should add better logic
                             // so that we get the expected behaviour rather than a sudden jump.
-                            float scaleX = 1.0f, scaleY = 1.0f, angle = 0f, xOffset = 0.0f, yOffset = 0.0f;
-                            if (object_node.Attributes["scale_x"] != null)
+                            
+                            // find the interpolated value if required
+                            // First, check if the timeline frame's timestamp is different to the key's.
+                            // If yes, that means we need to interpolate the entire value depending on previous or
+                            // following nodes
+                            var frameTime = frame_node.GetDefault("time", 0);
+                            var mainlineTime = mainline_key.GetDefault("time", 0);
+                            
+                            float Interpolate(string attrName, float defaultValue)
                             {
-                                scaleX = float.Parse(object_node.Attributes["scale_x"].Value);
-                            }
-                            else if (lastDataMap.ContainsKey(timeline_id))
-                            {
-                                scaleX = lastDataMap[timeline_id].ScaleX;
-                            }
+                                // If our timeline key node actually has the attr value and is ours',
+                                // we can simply get the value.
+                                if (frameTime == mainlineTime && frame_object_node.Attributes[attrName] != null)
+                                {
+                                    return float.Parse(frame_object_node.Attributes[attrName].Value);
+                                }
+                                
+                                // otherwise: we need to find the last timeline key node that has our value.
+                                // also find the next timeline key node that has our value, then interpolate.
+                                XmlNode prev = null, next = null;
+                                if (frame_id >= 0)
+                                {
+                                    prev = timeline_keys[frame_id];
+                                }
 
-                            if (object_node.Attributes["scale_y"] != null)
-                            {
-                                scaleY = float.Parse(object_node.Attributes["scale_y"].Value);
-                            }
-                            else if (lastDataMap.ContainsKey(timeline_id))
-                            {
-                                scaleY = lastDataMap[timeline_id].ScaleY;
-                            }
+                                if (frame_id < timeline_keys.Length - 1)
+                                {
+                                    next = timeline_keys[frame_id + 1];
+                                }
 
-                            if (object_node.Attributes["angle"] != null)
-                            {
-                                angle = float.Parse(object_node.Attributes["angle"].Value);
-                            }
-                            else if (lastDataMap.ContainsKey(timeline_id))
-                            {
-                                angle = lastDataMap[timeline_id].Angle;
-                            }
+                                // if we haven't found a prev node, that means our value is simply default.
+                                if (prev == null)
+                                    return defaultValue;
+                                // No next node means use the previous value
+                                if (next == null)
+                                    return prev.FirstElementChild().GetDefault(attrName, defaultValue);
 
-                            if (object_node.Attributes["x"] != null)
-                            {
-                                xOffset = float.Parse(object_node.Attributes["x"].Value);
+                                // otherwise, gotta lerp
+                                return prev.Interpolate(next, mainlineTime, attrName, defaultValue);
                             }
-                            else if (lastDataMap.ContainsKey(timeline_id))
-                            {
-                                xOffset = lastDataMap[timeline_id].X;
-                            }
-
-                            if (object_node.Attributes["y"] != null)
-                            {
-                                yOffset = float.Parse(object_node.Attributes["y"].Value);
-                            }
-                            else if (lastDataMap.ContainsKey(timeline_id))
-                            {
-                                yOffset = lastDataMap[timeline_id].Y;
-                            }
+                            var scaleX = Interpolate("scale_x", 1f);
+                            var scaleY = Interpolate("scale_y", 1f);
+                            var angle = Interpolate("angle", 0f);
+                            var xOffset = Interpolate("x", 0f);
+                            var yOffset = Interpolate("y", 0f);
+//                            Console.WriteLine($"{scaleX} {scaleY} {angle} {xOffset} {yOffset}");
 
                             var animdata = new AnimationData
                             {
