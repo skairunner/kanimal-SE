@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NLog;
 using CommandLine;
 using kanimal;
@@ -40,25 +41,69 @@ namespace kanimal_cli
 
             LogManager.Configuration = config;
         }
+
+        static void Convert(string input_format, string output_format, List<string> files, ProgramOptions opt)
+        {
+            SetVerbosity(opt);
+
+            Logger.Info("Reading...");
+            Reader reader = null;
+            switch (input_format)
+            {
+                case "scml":
+                    var scml = files.Find(path => path.EndsWith(".scml"));
+                    reader = new ScmlReader(scml);
+                    reader.Read(opt.OutputPath);
+                    break;
+                case "kanim":
+                    var png = files.Find(path => path.EndsWith(".png"));
+                    var build = files.Find(path => path.EndsWith("build.bytes"));
+                    var anim = files.Find(path => path.EndsWith("anim.bytes"));
+                    reader = new KanimReader(
+                        new FileStream(png, FileMode.Open),
+                        new FileStream(build, FileMode.Open),
+                        new FileStream(anim, FileMode.Open));
+                    reader.Read(opt.OutputPath);
+                    break;
+                default:
+                    Logger.Fatal($"The specified input format \"{input_format}\" is not recognized.");
+                    Environment.Exit((int)ExitCodes.IncorrectArguments);
+                    break;
+            }
+            
+            Logger.Info($"Successfully read from format {input_format}.");
+            Logger.Info("Writing...");
+
+            Directory.CreateDirectory(opt.OutputPath);
+            
+            switch (output_format)
+            {
+                case "scml":
+                    var scmlwriter = new ScmlWriter(reader);
+                    scmlwriter.Save(Path.Join(output_format, $"{reader.BuildData.Name}.scml"));
+                    scmlwriter.SaveSprites(opt.OutputPath);
+                    break;
+                case "kanim":
+                    var kanimwriter = new KanimWriter(reader);
+                    kanimwriter.Save(opt.OutputPath);
+                    break;
+                default:
+                    Logger.Fatal($"The specified output format \"{output_format}\" is not recognized.");
+                    Environment.Exit((int)ExitCodes.IncorrectArguments);
+                    break;
+            }
+
+            Logger.Info($"Successfully wrote to format {output_format}");
+        }
         
         static void Main(string[] args)
         {
             Parser.Default.ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, GenericOptions, DumpOptions>(args)
-                .WithParsed<KanimToScmlOptions>(o =>
-                {
-                    SetVerbosity(o);
-
-                    var files = new List<string>(o.Files);
-                    var png = files.Find(path => path.EndsWith(".png"));
-                    var build = files.Find(path => path.EndsWith("build.bytes"));
-                    var anim = files.Find(path => path.EndsWith("anim.bytes"));
-
-                    Kanimal.ToScml(
-                        png,
-                        build,
-                        anim,
-                        o.OutputPath);
-                })
+                .WithParsed<KanimToScmlOptions>(o => Convert(
+                    "kanim",
+                    "scml",
+                    o.Files.ToList(),
+                    o))
                 .WithParsed<DumpOptions>(o =>
                 {
                     SetVerbosity(o);
@@ -69,77 +114,21 @@ namespace kanimal_cli
                     var anim = files.Find(path => path.EndsWith("anim.bytes"));
 
                     Directory.CreateDirectory(o.OutputPath);
-                    Utilities.dump = new StreamWriter(new FileStream(Path.Join(o.OutputPath, "dump.log"), FileMode.Create));
+                    Utilities.dump =
+                        new StreamWriter(new FileStream(Path.Join(o.OutputPath, "dump.log"), FileMode.Create));
                     var reader = new KanimReader(
                         new FileStream(build, FileMode.Open),
-                        new FileStream(anim, FileMode.Open), 
+                        new FileStream(anim, FileMode.Open),
                         new FileStream(png, FileMode.Open));
                     reader.Read(o.OutputPath);
                     Utilities.dump.Flush();
                 })
-                .WithParsed<ScmlToKanimOptions>(options =>
-                {
-                    SetVerbosity(options);
-
-                    var file = options.ScmlFile;
-
-                    Kanimal.ToKanim(file, options.OutputPath);
-                })
-                .WithParsed<GenericOptions>(o =>
-                {
-                    SetVerbosity(o);
-                    
-                    var files = new List<string>(o.Files);
-
-                    Logger.Info("Reading...");
-                    Reader reader = null;
-                    switch (o.InputFormat)
-                    {
-                        case "scml":
-                            var scml = files.Find(path => path.EndsWith(".scml"));
-                            reader = new ScmlReader(scml);
-                            reader.Read(o.OutputPath);
-                            break;
-                        case "kanim":
-                            var png = files.Find(path => path.EndsWith(".png"));
-                            var build = files.Find(path => path.EndsWith("build.bytes"));
-                            var anim = files.Find(path => path.EndsWith("anim.bytes"));
-                            reader = new KanimReader(
-                                new FileStream(png, FileMode.Open),
-                                new FileStream(build, FileMode.Open),
-                                new FileStream(anim, FileMode.Open));
-                            reader.Read(o.OutputPath);
-                            break;
-                        default:
-                            Logger.Fatal($"The specified input format \"{o.InputFormat}\" is not recognized.");
-                            Environment.Exit((int)ExitCodes.IncorrectArguments);
-                            break;
-                    }
-                    
-                    Logger.Info($"Successfully read from format {o.InputFormat}.");
-                    Logger.Info("Writing...");
-
-                    Directory.CreateDirectory(o.OutputPath);
-                    
-                    switch (o.OutputFormat)
-                    {
-                        case "scml":
-                            var scmlwriter = new ScmlWriter(reader);
-                            scmlwriter.Save(Path.Join(o.OutputPath, $"{reader.BuildData.Name}.scml"));
-                            scmlwriter.SaveSprites(o.OutputPath);
-                            break;
-                        case "kanim":
-                            var kanimwriter = new KanimWriter(reader);
-                            kanimwriter.Save(o.OutputPath);
-                            break;
-                        default:
-                            Logger.Fatal($"The specified input format \"{o.OutputFormat}\" is not recognized.");
-                            Environment.Exit((int)ExitCodes.IncorrectArguments);
-                            break;
-                    }
-
-                    Logger.Info($"Successfully wrote to format {o.OutputFormat}");
-                });
+                .WithParsed<ScmlToKanimOptions>(o => Convert(
+                    "scml", 
+                    "kanim",
+                    new List<string>{o.ScmlFile},
+                    o))
+                .WithParsed<GenericOptions>(o => Convert(o.InputFormat, o.OutputFormat, o.Files.ToList(), o));
         }
     }
 }
