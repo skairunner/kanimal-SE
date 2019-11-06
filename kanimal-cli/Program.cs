@@ -46,6 +46,12 @@ namespace kanimal_cli
         {
             SetVerbosity(opt);
 
+            if (files.Count == 0)
+            {
+                Logger.Fatal("Please specify files to convert.");
+                Environment.Exit((int) ExitCodes.IncorrectArguments);
+            }
+
             Logger.Info("Reading...");
             Reader reader = null;
             switch (input_format)
