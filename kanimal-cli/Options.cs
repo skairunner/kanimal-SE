@@ -49,11 +49,4 @@ namespace kanimal_cli
         [Value(0)]
         public string ScmlFile { get; set; }
     }
-    
-    [Verb("Kanim", HelpText = "Convert kanim to kanim.")]
-    class KanimToKAnimOptions : ProgramOptions
-    {
-        [Value(0)]
-        public IEnumerable<string> Files { get; set; }
-    }
 }
