@@ -4,6 +4,7 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>netcoreapp3.0</TargetFramework>
         <RootNamespace>kanimal_cli</RootNamespace>
+        <RuntimeIdentifiers>win10-x64;osx.10.13-x64</RuntimeIdentifiers>
     </PropertyGroup>
 
     <ItemGroup>

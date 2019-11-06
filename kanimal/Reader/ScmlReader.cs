@@ -354,6 +354,7 @@ namespace kanimal
 
                         var frame_object_node = frame_node.GetElementsByTagName("object")[0];
                         
+                        // Figure out the file id from the timeline's keyframe
                             var image_node = projectFileIdMap[frame_object_node.Attributes["file"].Value];
                             var imageName = image_node.Attributes["name"].Value;
 
@@ -412,12 +413,14 @@ namespace kanimal
                                 // otherwise, gotta lerp
                                 return prev.Interpolate(next, mainlineTime, attrName, defaultValue);
                             }
+                            
                             var scaleX = Interpolate("scale_x", 1f);
                             var scaleY = Interpolate("scale_y", 1f);
                             var angle = Interpolate("angle", 0f);
                             var xOffset = Interpolate("x", 0f);
                             var yOffset = Interpolate("y", 0f);
-//                            Console.WriteLine($"{scaleX} {scaleY} {angle} {xOffset} {yOffset}");
+                            
+                            
 
                             var animdata = new AnimationData
                             {

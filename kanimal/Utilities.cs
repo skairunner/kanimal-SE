@@ -98,7 +98,8 @@ namespace kanimal
             catch (FormatException)
             {
                 throw new ProjectParseException(
-                    $"The file name \"{filename}\" is not in the correct format. Make sure the base name (excluding the extension) is followed by an underscore and a number.");
+                    $"The file name \"{filename}\" is not in the correct format. Make sure the base name (excluding the extension) is followed by an underscore and a number.\n" +
+                    $"For example: \"{filename}_0.png\".");
             }
         }
 
