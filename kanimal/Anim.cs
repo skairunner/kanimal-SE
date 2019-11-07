@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.VisualBasic.CompilerServices;
 
 namespace kanimal
 {
@@ -8,7 +7,7 @@ namespace kanimal
     {
         using AnimHashTable = Dictionary<int, string>;
 
-        public struct Anim: IToDebugString
+        public struct Anim : IToDebugString
         {
             public int Version, ElementCount, FrameCount, AnimCount, MaxVisibleSymbolFrames;
             public List<AnimBank> Anims;
@@ -28,7 +27,7 @@ namespace kanimal
             public Dictionary<string, int> ElementIdMap;
             private AnimHashTable prevHashTable;
             public List<Frame> Frames;
-            
+
             public SortedDictionary<string, int> BuildHistogram(AnimHashTable animHashes)
             {
                 var overallHistogram = new SortedDictionary<string, int>();
@@ -40,23 +39,15 @@ namespace kanimal
                     {
                         var name = element.FindName(animHashes);
                         if (perFrameHistogram.ContainsKey(name))
-                        {
                             perFrameHistogram[name] += 1;
-                        }
                         else
-                        {
                             perFrameHistogram[name] = 1;
-                        }
                     }
-                    
+
                     // update overall histograms once maximums are found
                     foreach (var entry in perFrameHistogram)
-                    {
                         if (!overallHistogram.ContainsKey(entry.Key) || overallHistogram[entry.Key] < entry.Value)
-                        {
                             overallHistogram[entry.Key] = entry.Value;
-                        }
-                    }
                 }
 
                 return overallHistogram;
@@ -64,10 +55,7 @@ namespace kanimal
 
             public Dictionary<string, int> BuildIdMap(AnimHashTable animHashes)
             {
-                if (animHashes == prevHashTable)
-                {
-                    return ElementIdMap;
-                }
+                if (animHashes == prevHashTable) return ElementIdMap;
                 var histogram = BuildHistogram(animHashes);
                 var idMap = new Dictionary<string, int>();
                 var index = 0;
@@ -75,16 +63,13 @@ namespace kanimal
                 {
                     var name = entry.Key;
                     var occurrences = entry.Value;
-                    for (int i = 0; i < occurrences; i++)
-                    {
-                        idMap[Utilities.GetAnimIdName(name, i)] = index++;
-                    }
+                    for (var i = 0; i < occurrences; i++) idMap[Utilities.GetAnimIdName(name, i)] = index++;
                 }
 
                 ElementIdMap = idMap;
                 prevHashTable = animHashes;
                 return idMap;
-            } 
+            }
         }
 
         public struct Frame
@@ -100,16 +85,17 @@ namespace kanimal
             {
                 public double X, Y, Angle, ScaleX, ScaleY;
             }
-            
+
             public int Image, Index, Layer, Flags;
             // flags has just one value
             // 1-> fg
             // but we don't represent/deal with that in  spriter so we always leave
             // it as 0
-            
+
             public int ZIndex; // only used in scml -> kanim conversion
-            
+
             public float A, B, G, R, M1, M2, M3, M4, M5, M6;
+
             /*
              * m1 m2 m3 m4 make up rotation + scaling matrix for element on this frame
              * m5 m6 are the position offset of the element on this frame
@@ -142,37 +128,31 @@ namespace kanimal
             {
                 // is part of the formula for decomposing transformation matrix into components
                 // see https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
-                var scale_x = Math.Sqrt(M1 * M1 + M2 * M2);
-                var scale_y = Math.Sqrt(M3 * M3 + M4 * M4);
+                var scaleX = Math.Sqrt(M1 * M1 + M2 * M2);
+                var scaleY = Math.Sqrt(M3 * M3 + M4 * M4);
 
                 var det = M1 * M4 - M3 * M2;
-                if (det < 0)
-                {
-                    scale_y *= -1;
-                }
-                
+                if (det < 0) scaleY *= -1;
+
                 // still part of the formula for obtaining rotation component from combined rotation + scaling
                 // undue scaling by dividing by scaling and then taking average value of sin/cos to make it more
                 // accurate (b/c sin and cos appear twice each in 2d rotation matrix)
-                var sin_approx = 0.5 * (M3 / scale_y - M2 / scale_x);
-                var cos_approx = 0.5 * (M1 / scale_x + M4 / scale_y);
+                var sinApprox = 0.5 * (M3 / scaleY - M2 / scaleX);
+                var cosApprox = 0.5 * (M1 / scaleX + M4 / scaleY);
 
-                var m1 = Utilities.ClampRange(-1, M1 / scale_x, 1);
-                var m2 = Utilities.ClampRange(-1, M2 / scale_x, 1);
-                var m3 = Utilities.ClampRange(-1, M3 / scale_y, 1);
-                var m4 = Utilities.ClampRange(-1, M4 / scale_y, 1);
+                var m1 = Utilities.ClampRange(-1, M1 / scaleX, 1);
+                var m2 = Utilities.ClampRange(-1, M2 / scaleX, 1);
+                var m3 = Utilities.ClampRange(-1, M3 / scaleY, 1);
+                var m4 = Utilities.ClampRange(-1, M4 / scaleY, 1);
 
-                var angle = Math.Atan2(sin_approx, cos_approx);
-                
+                var angle = Math.Atan2(sinApprox, cosApprox);
+
                 // it seems as if the notion of simply having x,y, angle and scale are not really sufficient to describe the
                 // transformation applied to each point since the 2x3 matrix m1...m6 doesn't nicely decompose into a valid rotation matrix
                 // basically the two components that are sin are not equal and the two components that are cos are not equal. This would imply
                 // that there is some additional transformation being applied to each point in addition to just the scale and rotation information
                 // that makes it such that when we just look at that rotation information it does not produce the correct result
-                if (angle < 0)
-                {
-                    angle += 2 * Math.PI;
-                }
+                if (angle < 0) angle += 2 * Math.PI;
 
                 angle *= 180 / Math.PI;
 
@@ -181,8 +161,8 @@ namespace kanimal
                     X = M5,
                     Y = M6,
                     Angle = angle,
-                    ScaleX = scale_x,
-                    ScaleY = scale_y
+                    ScaleX = scaleX,
+                    ScaleY = scaleY
                 };
             }
         }

@@ -20,36 +20,34 @@ namespace kanimal
         // Read the file at the given path and populate the above data entries.
         // Sprites are output at the directory.
         public abstract void Read(string outputDir);
-        
+
         // Build the table by reading from hashTable and buildData
         public void BuildBuildTable(int imgW, int imgH)
         {
             var buildTable = new List<KBuild.Row>();
             foreach (var symbol in BuildData.Symbols)
+            foreach (var frame in symbol.Frames)
             {
-                foreach (var frame in symbol.Frames)
+                var row = new KBuild.Row
                 {
-                    var row = new KBuild.Row
-                    {
-                        Build = BuildData,
-                        Name = BuildHashes[symbol.Hash],
-                        Index = frame.SourceFrameNum,
-                        Hash = symbol.Hash,
-                        Time = frame.Time,
-                        Duration = frame.Duration,
-                        X1 = frame.X1 * imgW,
-                        Y1 = (1f - frame.Y1) * imgH,
-                        X2 = frame.X2 * imgW,
-                        Y2 = (1 - frame.Y2) * imgH,
-                        Width = (frame.X2 - frame.X1) * imgW,
-                        Height = (frame.Y2 - frame.Y1) * imgH,
-                        PivotX = frame.PivotX,
-                        PivotY = frame.PivotY,
-                        PivotHeight = frame.PivotHeight,
-                        PivotWidth = frame.PivotWidth
-                    };
-                    buildTable.Add(row);
-                }
+                    Build = BuildData,
+                    Name = BuildHashes[symbol.Hash],
+                    Index = frame.SourceFrameNum,
+                    Hash = symbol.Hash,
+                    Time = frame.Time,
+                    Duration = frame.Duration,
+                    X1 = frame.X1 * imgW,
+                    Y1 = (1f - frame.Y1) * imgH,
+                    X2 = frame.X2 * imgW,
+                    Y2 = (1 - frame.Y2) * imgH,
+                    Width = (frame.X2 - frame.X1) * imgW,
+                    Height = (frame.Y2 - frame.Y1) * imgH,
+                    PivotX = frame.PivotX,
+                    PivotY = frame.PivotY,
+                    PivotHeight = frame.PivotHeight,
+                    PivotWidth = frame.PivotWidth
+                };
+                buildTable.Add(row);
             }
 
             BuildTable = buildTable;

@@ -1,13 +1,11 @@
-﻿using System;
-using System.Drawing.Imaging;
-using System.IO;
+﻿using System.IO;
 
 namespace kanimal
 {
     public static class Kanimal
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-        
+
         public static void ToScml(string imgPathStr, string buildPathStr, string animPathStr, string outputDir)
         {
             var outputPath = Path.GetFullPath(outputDir);
@@ -17,7 +15,7 @@ namespace kanimal
             Logger.Info($"Output path is \"{outputPath}\"");
 
             var reader = new KanimReader(
-                new FileStream(buildPathStr, FileMode.Open), 
+                new FileStream(buildPathStr, FileMode.Open),
                 new FileStream(animPathStr, FileMode.Open),
                 new FileStream(imgPathStr, FileMode.Open));
 
@@ -29,14 +27,14 @@ namespace kanimal
             var outputFilePath = Path.Join(outputPath, $"{reader.BuildData.Name}.scml");
             writer.Save(outputFilePath);
             writer.SaveSprites(outputPath);
-            
+
             Logger.Info("Done.");
         }
 
         public static void ToKanim(string projectStr, string outputDir)
         {
             Directory.CreateDirectory(outputDir);
-            
+
             Logger.Info($"Output path is \"{outputDir}\"");
             var reader = new ScmlReader(projectStr);
             reader.Read(outputDir);
@@ -44,14 +42,14 @@ namespace kanimal
             writer.Save(outputDir);
         }
 
-        public static void ScmlToScml(string scmlpath, string outputdir)
+        public static void ScmlToScml(string scmlPath, string outputDirectory)
         {
-            Directory.CreateDirectory(outputdir);
-            var reader = new ScmlReader(scmlpath);
-            reader.Read(outputdir);
+            Directory.CreateDirectory(outputDirectory);
+            var reader = new ScmlReader(scmlPath);
+            reader.Read(outputDirectory);
             var writer = new ScmlWriter(reader);
-            writer.Save(Path.Join(outputdir, reader.BuildData.Name + ".scml"));
-            writer.SaveSprites(outputdir);
+            writer.Save(Path.Join(outputDirectory, reader.BuildData.Name + ".scml"));
+            writer.SaveSprites(outputDirectory);
         }
 
         public static void KanimToKAnim(string imgPathStr, string buildPathStr, string animPathStr, string outputDir)
@@ -63,7 +61,7 @@ namespace kanimal
             Logger.Info($"Output path is \"{outputPath}\"");
 
             var reader = new KanimReader(
-                new FileStream(buildPathStr, FileMode.Open), 
+                new FileStream(buildPathStr, FileMode.Open),
                 new FileStream(animPathStr, FileMode.Open),
                 new FileStream(imgPathStr, FileMode.Open));
             reader.Read(outputDir);

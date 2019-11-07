@@ -12,16 +12,14 @@ namespace kanimal
     public static class Utilities
     {
         public const int MS_PER_S = 1000;
+
         public static Regex SpriteNameRegex = new Regex(
             @"^(?<basename>[\w\d.* '+=-]+)_(?<frame>\d+)(?<extension>\.[\w\d]{1,4})?");
-        
+
         public static void LogDebug(Logger logger, AnimHashTable hashes)
         {
             var builder = new StringBuilder();
-            foreach (var entry in hashes)
-            {
-                builder.Append($"value {entry.Key} maps onto symbol {entry.Value}\n");
-            }
+            foreach (var entry in hashes) builder.Append($"value {entry.Key} maps onto symbol {entry.Value}\n");
             logger.Debug(builder.ToString());
         }
 
@@ -33,10 +31,7 @@ namespace kanimal
         public static void LogDebug(Logger logger, List<KBuild.Row> buildTable)
         {
             var builder = new StringBuilder();
-            foreach (var row in buildTable)
-            {
-                builder.Append(row.ToDebugString() + "\n");
-            }
+            foreach (var row in buildTable) builder.Append(row.ToDebugString() + "\n");
 
             logger.Debug(builder.ToString());
         }
@@ -44,11 +39,8 @@ namespace kanimal
         public static void LogDebug(Logger logger, Dictionary<string, int> animIdMap)
         {
             var builder = new StringBuilder();
-            foreach (var entry in animIdMap)
-            {
-                builder.Append($"element {entry.Key} maps onto index {entry.Value}\n");
-            }
-            
+            foreach (var entry in animIdMap) builder.Append($"element {entry.Key} maps onto index {entry.Value}\n");
+
             logger.Debug(builder.ToString());
         }
 
@@ -56,7 +48,7 @@ namespace kanimal
         {
             return $"{name}_{index}";
         }
-        
+
         // Clamps x to the range [a, b]
         public static double ClampRange(double a, double x, double b)
         {
@@ -79,13 +71,9 @@ namespace kanimal
         {
             var i = name.LastIndexOf(".", StringComparison.Ordinal);
             if (i >= 0)
-            {
                 return name.Substring(0, i);
-            }
             else
-            {
                 return name;
-            }
         }
 
         // depends on the filename being properly formatted
@@ -108,50 +96,40 @@ namespace kanimal
             if (str == null)
                 return 0;
 
-            int hash = 0;
+            var hash = 0;
             str = str.ToLower();
-            for (int i = 0; i < str.Length; i++)
-            {
-                hash = str.ToLower()[i] + (hash << 6) + (hash << 16) - hash;
-            }
+            for (var i = 0; i < str.Length; i++) hash = str.ToLower()[i] + (hash << 6) + (hash << 16) - hash;
 
             return hash;
         }
 
-        public static T Min<T>(params T[] values) where T: IComparable<T>
+        public static T Min<T>(params T[] values) where T : IComparable<T>
         {
             var min = values[0];
-            for (int i = 1; i < values.Length; i++)
-            {
+            for (var i = 1; i < values.Length; i++)
                 if (values[i].CompareTo(min) < 0)
-                {
                     min = values[i];
-                }
-            }
 
             return min;
         }
-        
-        public static T Max<T>(params T[] values) where T: IComparable<T>
+
+        public static T Max<T>(params T[] values) where T : IComparable<T>
         {
             var max = values[0];
-            for (int i = 1; i < values.Length; i++)
-            {
+            for (var i = 1; i < values.Length; i++)
                 if (values[i].CompareTo(max) > 0)
-                {
                     max = values[i];
-                }
-            }
 
             return max;
         }
 
         // As Logger.Debug, but also prints to a special dump stream, if specified
-        public static TextWriter dump = null;
+        public static TextWriter Dump = null;
+
         public static void LogToDump(string str, Logger logger)
         {
             logger.Debug(str);
-            dump?.WriteLine(str);
+            Dump?.WriteLine(str);
         }
 
         // Given value v1 at t1, and value v2 at t2, linearly interpolates (lerps)

@@ -4,22 +4,21 @@ using System.IO;
 using System.Drawing;
 using System.Text;
 using NLog;
-using NLog.Fluent;
 
 namespace kanimal
 {
-    public class KanimReader: Reader
+    public class KanimReader : Reader
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        
-        private Stream bild, anim;
-        
+
+        private Stream _build, anim;
+
         private Bitmap image;
         private Dictionary<string, int> AnimIdMap;
 
-        public KanimReader(Stream bild, Stream anim, Stream img)
+        public KanimReader(Stream build, Stream anim, Stream img)
         {
-            this.bild = bild;
+            _build = build;
             this.anim = anim;
             image = new Bitmap(img);
         }
@@ -27,8 +26,8 @@ namespace kanimal
         // Reads the entire build.bytes file
         public void ReadBuildData()
         {
-            var reader = new BinaryReader(bild);
-            
+            var reader = new BinaryReader(_build);
+
             try
             {
                 VerifyHeader("BILD", reader);
@@ -37,22 +36,22 @@ namespace kanimal
             {
                 Logger.Error(e);
                 Logger.Error("Did you provide the right build.bytes file?");
-                Environment.Exit((int)ExitCodes.IncorrectHeader);
+                Environment.Exit((int) ExitCodes.IncorrectHeader);
             }
-            
+
             ReadSymbols(reader);
             ReadBuildHashes(reader);
             BuildBuildTable(image.Width, image.Height);
-            
+
             Utilities.LogDebug(Logger, BuildData);
             Utilities.LogDebug(Logger, BuildHashes);
             Utilities.LogDebug(Logger, BuildTable);
         }
-        
+
         // Reads the symbols and frames
         private void ReadSymbols(BinaryReader reader)
         {
-            KBuild.Build buildData = new KBuild.Build
+            var buildData = new KBuild.Build
             {
                 Version = reader.ReadInt32(),
                 SymbolCount = reader.ReadInt32(),
@@ -62,14 +61,14 @@ namespace kanimal
             };
             Utilities.LogToDump(
                 "=== BUILD FILE ===\n" +
-                $"{buildData.Name}\n" + 
+                $"{buildData.Name}\n" +
                 $"  Version: {buildData.Version}\n" +
                 $"  # symbols: {buildData.SymbolCount}\n" +
                 $"  # frames: {buildData.FrameCount}", Logger);
             Utilities.LogToDump(
                 "\n<Symbols>"
                 , Logger);
-            for (int i = 0; i < buildData.SymbolCount; i++)
+            for (var i = 0; i < buildData.SymbolCount; i++)
             {
                 var symbol = new KBuild.Symbol
                 {
@@ -83,8 +82,8 @@ namespace kanimal
                 Utilities.LogToDump(
                     $"  Symbol: hash {symbol.Hash}, path {symbol.Path}, frame count {symbol.FrameCount}", Logger);
 
-                int time = 0;
-                for (int j = 0; j < symbol.FrameCount; j++)
+                var time = 0;
+                for (var j = 0; j < symbol.FrameCount; j++)
                 {
                     var frame = new KBuild.Frame
                     {
@@ -102,7 +101,8 @@ namespace kanimal
                         Time = time
                     };
                     Utilities.LogToDump(
-                        $"    Frame {frame.SourceFrameNum}: image {frame.BuildImageIndex} for duration {frame.Duration}, BB ({frame.X1}, {frame.Y1}) - ({frame.X2}, {frame.Y2}), pivot ({frame.PivotX},{frame.PivotY})", Logger);
+                        $"    Frame {frame.SourceFrameNum}: image {frame.BuildImageIndex} for duration {frame.Duration}, BB ({frame.X1}, {frame.Y1}) - ({frame.X2}, {frame.Y2}), pivot ({frame.PivotX},{frame.PivotY})",
+                        Logger);
                     time += frame.Duration;
                     symbol.Frames.Add(frame);
                 }
@@ -119,7 +119,7 @@ namespace kanimal
             var buildHashes = new Dictionary<int, string>();
             var numHashes = reader.ReadInt32();
             Utilities.LogToDump($"\n<Hashtable {numHashes}>", Logger);
-            for (int i = 0; i < numHashes; i++)
+            for (var i = 0; i < numHashes; i++)
             {
                 var hash = reader.ReadInt32();
                 var str = reader.ReadPString();
@@ -137,9 +137,10 @@ namespace kanimal
             Sprites = new List<Sprite>();
             foreach (var row in BuildTable)
             {
-                var y = (int)(image.Height - row.Y1);
-                Utilities.LogToDump($"  Sprite \"{row.Name}_{row.Index}\" @ {row.X1} {y}, {row.Width}x{row.Height}", Logger);
-                var sprite = image.Clone(new Rectangle((int) row.X1, y, (int)row.Width, (int)row.Height),
+                var y = (int) (image.Height - row.Y1);
+                Utilities.LogToDump($"  Sprite \"{row.Name}_{row.Index}\" @ {row.X1} {y}, {row.Width}x{row.Height}",
+                    Logger);
+                var sprite = image.Clone(new Rectangle((int) row.X1, y, (int) row.Width, (int) row.Height),
                     image.PixelFormat);
                 Sprites.Add(new Sprite
                 {
@@ -152,7 +153,7 @@ namespace kanimal
         public void ReadAnimData()
         {
             var reader = new BinaryReader(anim);
-            
+
             try
             {
                 VerifyHeader("ANIM", reader);
@@ -161,14 +162,14 @@ namespace kanimal
             {
                 Logger.Error(e);
                 Logger.Error("Did you provide the right anim.bytes file?");
-                Environment.Exit((int)ExitCodes.IncorrectHeader);
+                Environment.Exit((int) ExitCodes.IncorrectHeader);
             }
 
             Utilities.LogToDump("\n\n=== ANIM FILE ===", Logger);
             ParseAnims(reader);
             ReadAnimHashes(reader);
             ReadAnimIds();
-            
+
             Utilities.LogDebug(Logger, AnimData);
             Utilities.LogDebug(Logger, AnimHashes);
             Utilities.LogDebug(Logger, AnimIdMap);
@@ -184,15 +185,15 @@ namespace kanimal
                 AnimCount = reader.ReadInt32(),
                 Anims = new List<KAnim.AnimBank>()
             };
-            
+
             Utilities.LogToDump(
-                $"  Version: {animData.Version}\n" + 
-                $"  # elements: {animData.ElementCount}\n" + 
+                $"  Version: {animData.Version}\n" +
+                $"  # elements: {animData.ElementCount}\n" +
                 $"  # frames: {animData.FrameCount}\n" +
                 $"  # anims: {animData.AnimCount}\n" +
                 "\n<Anims>", Logger);
 
-            for (int i = 0; i < animData.AnimCount; i++)
+            for (var i = 0; i < animData.AnimCount; i++)
             {
                 var name = reader.ReadPString();
                 var hash = reader.ReadInt32();
@@ -204,10 +205,11 @@ namespace kanimal
                     FrameCount = reader.ReadInt32(),
                     Frames = new List<KAnim.Frame>()
                 };
-                
-                Utilities.LogToDump($"  Anim \"{bank.Name}\" (hash {bank.Hash}): {bank.FrameCount} frames @ {bank.Rate} fps", Logger);
 
-                for (int j = 0; j < bank.FrameCount; j++)
+                Utilities.LogToDump(
+                    $"  Anim \"{bank.Name}\" (hash {bank.Hash}): {bank.FrameCount} frames @ {bank.Rate} fps", Logger);
+
+                for (var j = 0; j < bank.FrameCount; j++)
                 {
                     var frame = new KAnim.Frame
                     {
@@ -218,9 +220,11 @@ namespace kanimal
                         ElementCount = reader.ReadInt32(),
                         Elements = new List<KAnim.Element>()
                     };
-                    Utilities.LogToDump($"    Frame @ ({frame.X}, {frame.Y}) is {frame.Width}x{frame.Height}. {frame.ElementCount} sub-elements.", Logger);
+                    Utilities.LogToDump(
+                        $"    Frame @ ({frame.X}, {frame.Y}) is {frame.Width}x{frame.Height}. {frame.ElementCount} sub-elements.",
+                        Logger);
 
-                    for (int k = 0; k < frame.ElementCount; k++)
+                    for (var k = 0; k < frame.ElementCount; k++)
                     {
                         var element = new KAnim.Element
                         {
@@ -242,11 +246,12 @@ namespace kanimal
                         };
                         Utilities.LogToDump(
                             $"      Sub-element #{element.Index} is {element.Image} (\"{BuildHashes[element.Image]}\") @ layer {element.Layer}\n" +
-                            $"        Matrix: ({element.M1} {element.M2} {element.M3} {element.M4}), translate {element.M5} {element.M6}. Order {element.Order}", Logger);
+                            $"        Matrix: ({element.M1} {element.M2} {element.M3} {element.M4}), translate {element.M5} {element.M6}. Order {element.Order}",
+                            Logger);
 
                         frame.Elements.Add(element);
                     }
-                    
+
                     bank.Frames.Add(frame);
                 }
 
@@ -263,9 +268,9 @@ namespace kanimal
         {
             var animHashes = new Dictionary<int, string>();
 
-            int numHashes = reader.ReadInt32();
+            var numHashes = reader.ReadInt32();
             Utilities.LogToDump($"\n<Anim hashes {numHashes}>", Logger);
-            for (int i = 0; i < numHashes; i++)
+            for (var i = 0; i < numHashes; i++)
             {
                 var hash = reader.ReadInt32();
                 var text = reader.ReadPString();
@@ -279,23 +284,19 @@ namespace kanimal
         private void ReadAnimIds()
         {
             var animIdMap = new Dictionary<string, int>();
-            
+
             Utilities.LogToDump("\n<Anim ids>", Logger);
             var key = 0;
             foreach (var bank in AnimData.Anims)
+            foreach (var frame in bank.Frames)
+            foreach (var element in frame.Elements)
             {
-                foreach (var frame in bank.Frames)
+                var name = $"{AnimHashes[element.Image]}_{element.Index}_{AnimHashes[element.Layer]}";
+                if (!animIdMap.ContainsKey(name))
                 {
-                    foreach (var element in frame.Elements)
-                    {
-                        var name = $"{AnimHashes[element.Image]}_{element.Index}_{AnimHashes[element.Layer]}";
-                        if (!animIdMap.ContainsKey(name))
-                        {
-                            animIdMap[name] = key;
-                            Utilities.LogToDump($"  {key} -> \"{name}\"", Logger);
-                            key += 1;
-                        }
-                    }
+                    animIdMap[name] = key;
+                    Utilities.LogToDump($"  {key} -> \"{name}\"", Logger);
+                    key += 1;
                 }
             }
 
@@ -307,12 +308,10 @@ namespace kanimal
             var actualHeader = Encoding.ASCII.GetString(buffer.ReadBytes(expectedHeader.Length));
 
             if (expectedHeader != actualHeader)
-            {
                 throw new HeaderAssertException(
                     $"Expected header \"{expectedHeader}\" but got \"{actualHeader}\" instead.",
                     expectedHeader,
                     actualHeader);
-            }
         }
 
         // TODO: Include images into the in-memory format & remove outputdir arg for something better
@@ -320,10 +319,10 @@ namespace kanimal
         {
             Logger.Info("Parsing build data.");
             ReadBuildData();
-            
+
             Logger.Info("Importing textures.");
             ExportTextures();
-            
+
             Logger.Info("Parsing animation data.");
             ReadAnimData();
         }

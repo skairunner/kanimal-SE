@@ -1,6 +1,4 @@
-﻿using NLog;
-
-namespace kanimal
+﻿namespace kanimal
 {
     public interface IToDebugString
     {

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using kanimal;
 using NLog;
 using MaxRectsBinPack;
 
@@ -11,20 +10,20 @@ namespace kanimal
     public class PackedSprite
     {
         private Sprite sprite;
-        
+
         public PackedSprite(int x, int y, Sprite sprite)
         {
             X = x;
             Y = y;
             this.sprite = sprite;
         }
-        
+
         public int X { get; }
         public int Y { get; }
         public int Width => sprite.Width;
         public int Height => sprite.Height;
         public string Name => sprite.Name;
-        
+
         public Bitmap Sprite => sprite.Bitmap;
 
         public string BaseName => Utilities.GetSpriteBaseName(Name);
@@ -40,7 +39,7 @@ namespace kanimal
         public int Height => Bitmap.Height;
         public int Width => Bitmap.Width;
     }
-    
+
     public class TexturePacker
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -53,7 +52,7 @@ namespace kanimal
         {
             this.sprites = sprites;
             SpriteAtlas = new List<PackedSprite>();
-            
+
             Pack();
         }
 
@@ -65,13 +64,9 @@ namespace kanimal
             {
                 var baseName = Utilities.GetSpriteBaseName(entry.Name);
                 if (histogram.ContainsKey(baseName))
-                {
                     histogram[baseName] += 1;
-                }
                 else
-                {
                     histogram[baseName] = 1;
-                }
             }
 
             return histogram;
@@ -81,26 +76,23 @@ namespace kanimal
         {
             // Brute force trial-and-error sprite packing.
             // Double the smaller axis of the sheet each time it fails.
-            var sheet_w = 256;
-            var sheet_h = 256;
+            var sheetW = 256;
+            var sheetH = 256;
 
-            while (!TryPack(sheet_w, sheet_h))
-            {
-                if (sheet_w > sheet_h)
-                    sheet_h *= 2;
+            while (!TryPack(sheetW, sheetH))
+                if (sheetW > sheetH)
+                    sheetH *= 2;
                 else
-                    sheet_w *= 2;
-            }
+                    sheetW *= 2;
 
             using (var grD = Graphics.FromImage(SpriteSheet))
             {
                 foreach (var sprite in SpriteAtlas)
-                {
                     grD.DrawImage(sprite.Sprite,
                         new Rectangle(sprite.X, sprite.Y, sprite.Width, sprite.Height));
-                } 
             }
-            Logger.Info($"Packed {sheet_w} x {sheet_h}");
+
+            Logger.Info($"Packed {sheetW} x {sheetH}");
         }
 
         // returns false when the packing failed. 
@@ -122,13 +114,10 @@ namespace kanimal
             foreach (var sprite in spritesToPack)
             {
                 var rect = packer.Insert(sprite.Width, sprite.Height, FreeRectChoiceHeuristic.RectBestShortSideFit);
-                if (rect.GetArea() == 0)
-                {
-                    return false;
-                }
+                if (rect.GetArea() == 0) return false;
                 SpriteAtlas.Add(new PackedSprite(rect.X, rect.Y, sprite));
             }
-            
+
             SpriteSheet = new Bitmap(sheet_w, sheet_h);
 
             return true;

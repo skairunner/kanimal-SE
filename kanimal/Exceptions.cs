@@ -9,23 +9,22 @@ namespace kanimal
         IncorrectHeader = 2,
         IncorrectArguments = 3,
     }
-    
+
     public class KAnimalException : Exception
     {
         protected KAnimalException(string message)
             : base(message)
         {
-            
         }
     }
-    
-    public class HeaderAssertException: KAnimalException
+
+    public class HeaderAssertException : KAnimalException
     {
         public string ExpectedHeader { get; }
         public string ActualHeader { get; }
 
         public HeaderAssertException(string message, string expected, string actual)
-        : base(message)
+            : base(message)
         {
             ExpectedHeader = expected;
             ActualHeader = actual;
@@ -35,8 +34,9 @@ namespace kanimal
     public class SpriteParseException : KAnimalException
     {
         public string Filename { get; }
+
         public SpriteParseException(string message, string filename)
-        : base(message)
+            : base(message)
         {
             Filename = filename;
         }
@@ -47,7 +47,6 @@ namespace kanimal
         public ProjectParseException(string message)
             : base(message)
         {
-            
         }
     }
 }

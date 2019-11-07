@@ -3,11 +3,11 @@ using CommandLine;
 
 namespace kanimal_cli
 {
-    abstract class ProgramOptions
+    internal abstract class ProgramOptions
     {
         [Option('v', "verbose", Required = false, HelpText = "Enable debug output.")]
         public bool Verbose { get; set; }
-        
+
         [Option('s', "silent", Required = false, HelpText = "Totally silence output on success.")]
         public bool Silent { get; set; }
 
@@ -16,37 +16,33 @@ namespace kanimal_cli
     }
 
     [Verb("dump", HelpText = "Output a dump of the specified kanim.")]
-    class DumpOptions : ProgramOptions
+    internal class DumpOptions : ProgramOptions
     {
-        [Value(0)]
-        public IEnumerable<string> Files { get; set; }
+        [Value(0)] public IEnumerable<string> Files { get; set; }
     }
 
     // For ones with Output and Input specifiers
     [Verb("convert", HelpText = "Convert between formats.")]
-    class GenericOptions: ProgramOptions
+    internal class GenericOptions : ProgramOptions
     {
         [Option('I', "input-format", Required = true, HelpText = "The input format, from [kanim, scml]")]
         public string InputFormat { get; set; }
-        
+
         [Option('O', "output-format", Required = true, HelpText = "The output format, from [kanim, scml]")]
         public string OutputFormat { get; set; }
-        
-        [Value(0)]
-        public IEnumerable<string> Files { get; set; }
+
+        [Value(0)] public IEnumerable<string> Files { get; set; }
     }
 
     [Verb("scml", HelpText = "Convert kanim to scml. Convenience verb equivalent to 'convert -I kanim -O scml'.")]
-    class KanimToScmlOptions: ProgramOptions
+    internal class KanimToScmlOptions : ProgramOptions
     {
-        [Value(0)]
-        public IEnumerable<string> Files { get; set; }
+        [Value(0)] public IEnumerable<string> Files { get; set; }
     }
 
     [Verb("kanim", HelpText = "Convert scml to kanim. Convenience verb equivalent to 'convert -I scml -O kanim'.")]
-    class ScmlToKanimOptions : ProgramOptions
+    internal class ScmlToKanimOptions : ProgramOptions
     {
-        [Value(0)]
-        public string ScmlFile { get; set; }
+        [Value(0)] public string ScmlFile { get; set; }
     }
 }

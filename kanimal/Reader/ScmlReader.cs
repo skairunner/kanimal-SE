@@ -4,7 +4,10 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Xml;
+using kanimal.KAnim;
+using kanimal.KBuild;
 using NLog;
+using Frame = kanimal.KBuild.Frame;
 
 namespace kanimal
 {
@@ -13,8 +16,8 @@ namespace kanimal
     {
         public float X, Y, Angle, ScaleX, ScaleY;
     }
-    
-    public class ScmlReader: Reader
+
+    public class ScmlReader : Reader
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
@@ -42,7 +45,7 @@ namespace kanimal
                 projectFileIdMap[element.Attributes["id"].Value] = element;
             }
         }
-        
+
         public override void Read(string outputDir)
         {
             scml = new XmlDocument();
@@ -57,17 +60,17 @@ namespace kanimal
                     Utilities.WithoutExtension(Path.GetFileName(filename)),
                     new Bitmap(filename)))
                 .ToList();
-            
+
             // Also set the output list of sprites
             Sprites = new List<Sprite>();
             Sprites = sprites.Select(sprite => new Sprite {Bitmap = sprite.Item2, Name = sprite.Item1}).ToList();
-            
+
             Logger.Info("Reading build info.");
             textures = new TexturePacker(sprites);
             // Sort packed sprites by name to facilitate build packing later on, bc it has flaky logic
             // and will otherwise fail
             textures.SpriteAtlas.Sort(
-                (sprite1, sprite2) => String.Compare(sprite1.Name, sprite2.Name, StringComparison.Ordinal));
+                (sprite1, sprite2) => string.Compare(sprite1.Name, sprite2.Name, StringComparison.Ordinal));
 
             // Once texture is packed. reads the atlas to determine build info
             PackBuild(textures);
@@ -83,14 +86,14 @@ namespace kanimal
 
         private void PackBuild(TexturePacker texture)
         {
-            BuildData = new KBuild.Build();
+            BuildData = new Build();
             BuildData.Version = 10; // magic number
             SetSymbolsAndFrames(texture.SpriteAtlas);
             BuildData.Name = scml.GetElementsByTagName("entity")[0].Attributes["name"].Value;
             var histogram = texture.GetHistogram();
             var hashTable = new Dictionary<string, int>();
 
-            BuildData.Symbols = new List<KBuild.Symbol>();
+            BuildData.Symbols = new List<Symbol>();
             var symbolIndex = -1;
             string lastName = null;
 
@@ -99,14 +102,12 @@ namespace kanimal
                 // Only add each unique symbol once
                 if (lastName != sprite.BaseName)
                 {
-                    var symbol = new KBuild.Symbol();
+                    var symbol = new Symbol();
                     // The hash table caches a KleiHash translation of all sprites.
                     // It may be unnecessary but the original had it, and I don't know if the performance impact is
                     // small enough to remove it.
                     if (!hashTable.ContainsKey(sprite.BaseName))
-                    {
                         hashTable[sprite.BaseName] = Utilities.KleiHash(sprite.BaseName);
-                    }
 
                     symbol.Hash = hashTable[sprite.BaseName];
                     symbol.Path = symbol.Hash;
@@ -116,54 +117,50 @@ namespace kanimal
                     // have seen some Klei files in which flags = 1 for some symbols but can't determine what that does
                     symbol.Flags = 0;
                     symbol.FrameCount = histogram[sprite.BaseName];
-                    symbol.Frames = new List<KBuild.Frame>();
+                    symbol.Frames = new List<Frame>();
                     BuildData.Symbols.Add(symbol);
 
                     symbolIndex++;
                     lastName = sprite.BaseName;
                 }
 
-                KBuild.Frame frame = new KBuild.Frame();
+                var frame = new Frame();
                 frame.SourceFrameNum = Utilities.GetFrameCount(sprite.Name);
                 // duration is always 1 because the frames for a symbol always are numbered incrementing by 1
                 // (or at least that's why I think it's always 1 in the examples I looked at)
                 frame.Duration = 1;
                 // this value as read from the file is unused by Klei code and all example files have it set to 0 for all symbols
                 frame.BuildImageIndex = 0;
-                
-                frame.X1 = (float)sprite.X / texture.SpriteSheet.Width;
-                frame.X2 = (float)(sprite.X + sprite.Width) / texture.SpriteSheet.Width;
-                frame.Y1 = (float)sprite.Y / texture.SpriteSheet.Height;
-                frame.Y2 = (float)(sprite.Y + sprite.Height) / texture.SpriteSheet.Height;
-                
+
+                frame.X1 = (float) sprite.X / texture.SpriteSheet.Width;
+                frame.X2 = (float) (sprite.X + sprite.Width) / texture.SpriteSheet.Width;
+                frame.Y1 = (float) sprite.Y / texture.SpriteSheet.Height;
+                frame.Y2 = (float) (sprite.Y + sprite.Height) / texture.SpriteSheet.Height;
+
                 // do not set frame.time since it was a calculated property and not actually used in kbild
                 frame.PivotWidth = sprite.Width * 2;
                 frame.PivotHeight = sprite.Height * 2;
-                
+
                 // Find the appropriate pivot from the scml
                 var scmlnode = projectSprites[$"{sprite.BaseName}_{frame.SourceFrameNum}"];
                 frame.PivotX = -(float.Parse(scmlnode.Attributes["pivot_x"].Value) - 0.5f) * frame.PivotWidth;
                 frame.PivotY = (float.Parse(scmlnode.Attributes["pivot_y"].Value) - 0.5f) * frame.PivotHeight;
                 BuildData.Symbols[symbolIndex].Frames.Add(frame);
             }
-            
+
             // Finally, flip the key/values to get the build hash table
             BuildHashes = new Dictionary<int, string>();
-            foreach (var entry in hashTable)
-            {
-                BuildHashes[entry.Value] = entry.Key;
-            }
-            
+            foreach (var entry in hashTable) BuildHashes[entry.Value] = entry.Key;
+
             BuildBuildTable(texture.SpriteSheet.Width, texture.SpriteSheet.Height);
         }
 
         private XmlElement GetMainline(XmlNodeList nodes)
         {
             foreach (var element in nodes.GetElements())
-            {
                 if (element.Name == "mainline")
                     return element;
-            }
+
             throw new ProjectParseException(
                 "SCML format exception: Can't find <mainline> child of <animation>!");
         }
@@ -173,12 +170,8 @@ namespace kanimal
         {
             var map = new Dictionary<int, XmlElement>();
             foreach (var element in nodes.GetElements())
-            {
                 if (element.Name == "timeline")
-                {
                     map[int.Parse(element.Attributes["id"].Value)] = element;
-                }
-            }
 
             return map;
         }
@@ -189,50 +182,44 @@ namespace kanimal
             foreach (var animation in entity.ChildNodes.GetElements())
             {
                 if (animation.Name != "animation")
-                {
-                    throw new ProjectParseException($"SCML format exception: all children of <entity> should be <animation>, but was <{animation.Name}> instead.");
-                }
+                    throw new ProjectParseException(
+                        $"SCML format exception: all children of <entity> should be <animation>, but was <{animation.Name}> instead.");
 
                 var animName = animation.Attributes["name"].Value;
                 AnimHashes[Utilities.KleiHash(animName)] = animName;
             }
         }
-        
+
         private void PackAnim()
         {
-            AnimData = new KAnim.Anim();
+            AnimData = new Anim();
             AnimData.Version = 5; // everyone loves magic numbers
-            AnimData.Anims = new List<KAnim.AnimBank>();
+            AnimData.Anims = new List<AnimBank>();
             AnimHashes = new Dictionary<int, string>();
-            
+
             // reading the scml to get the data you get by counting everything
             SetAggregateData();
-            
+
             // anim names need to go into animhash as well
             PopulateHashTableWithAnimations();
 
             var reverseHash = new Dictionary<string, int>();
-            foreach (var entry in AnimHashes)
-            {
-                reverseHash[entry.Value] = entry.Key;
-            }
-            
-            var Entity = scml.GetElementsByTagName("entity")[0];
-            var animations = Entity.ChildNodes.GetElements();
+            foreach (var entry in AnimHashes) reverseHash[entry.Value] = entry.Key;
+
+            var entity = scml.GetElementsByTagName("entity")[0];
+            var animations = entity.ChildNodes.GetElements();
             var animCount = 0;
-            bool hasInconsistentIntervals = false;
-            var InconsistentAnims = new HashSet<string>();
+            var hasInconsistentIntervals = false;
+            var inconsistentAnims = new HashSet<string>();
 
             foreach (var anim in animations)
             {
                 animCount++;
                 if (anim.Name != "animation")
-                {
                     throw new ProjectParseException(
                         $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
-                }
 
-                var bank = new KAnim.AnimBank();
+                var bank = new AnimBank();
                 bank.Name = anim.Attributes["name"].Value;
                 bank.Hash = reverseHash[bank.Name];
                 Logger.Debug($"bank.name={bank.Name}\nhashTable={bank.Hash}");
@@ -243,14 +230,13 @@ namespace kanimal
                 var timelines = anim.ChildNodes;
                 var mainline = GetMainline(timelines);
                 // Build a temporary index of object id to list of frame times.
-                
-                
+
+
                 var timelineMap = GetTimelineMap(timelines);
-                var mainline_keys = mainline.ChildNodes.GetElements();
-                var lastDataMap = new Dictionary<int, AnimationData>();
+                var mainlineKeys = mainline.ChildNodes.GetElements();
                 var frameCount = 0;
                 var lastFrameTime = -1;
-                foreach (var mainline_key in mainline_keys)
+                foreach (var mainline_key in mainlineKeys)
                 {
                     frameCount++;
 
@@ -270,9 +256,10 @@ namespace kanimal
                             // otherwise, verify that the interval is correct
                             if (interval != this_interval)
                             {
-                                Logger.Warn($"While parsing animation \"{bank.Name}\", found inconsistent interval at keyframe {frameCount}: it is {this_interval} ms from the last frame, when {interval} ms was expected.");
+                                Logger.Warn(
+                                    $"While parsing animation \"{bank.Name}\", found inconsistent interval at keyframe {frameCount}: it is {this_interval} ms from the last frame, when {interval} ms was expected.");
                                 hasInconsistentIntervals = true;
-                                InconsistentAnims.Add(bank.Name);
+                                inconsistentAnims.Add(bank.Name);
                             }
                         }
                     }
@@ -281,17 +268,15 @@ namespace kanimal
                         lastFrameTime = 0; // if no time is specified, implied to be 0
                     else
                         lastFrameTime = int.Parse(mainline_key.Attributes["time"].Value);
-                    
+
                     // that will be sent to klei kanim format so we have to match the timeline data to key frames
                     // - this matching will be the part for
                     if (mainline_key.Name != "key")
-                    {
                         throw new ProjectParseException(
                             $"SCML format exception: all children of <animation> must be <key>, was <{anim.Name}> instead.");
-                    }
-                    
+
                     var frame = new KAnim.Frame();
-                    frame.Elements = new List<KAnim.Element>();
+                    frame.Elements = new List<Element>();
                     // the elements for this frame will be all the elements
                     // referenced in the object_ref(s) -> their data will be found
                     // in their timeline
@@ -304,7 +289,7 @@ namespace kanimal
                     // TODO: Check if never assigning a min/max value is relevant?
                     var maxX = float.MinValue;
                     var maxY = float.MinValue;
-                    
+
                     // look through object refs - will need to maintain list of object refs
                     // because in the end it must be sorted in accordance with the z-index
                     // before appended in correct order to elementsList
@@ -315,11 +300,10 @@ namespace kanimal
                         var object_ref = object_refs[i];
 
                         if (object_ref.Name != "object_ref")
-                        {
                             throw new ProjectParseException(
                                 $"SCML format exception: all children of <key> must be <object_ref>, was <{object_ref.Name}> instead.");
-                        }
-                        var element = new KAnim.Element();
+
+                        var element = new Element();
                         element.Flags = 0;
                         // spriter does not support changing colors of components
                         // through animation so this can be safely set to 0
@@ -332,7 +316,7 @@ namespace kanimal
                         // store z Index so later can be reordered
                         element.ZIndex = int.Parse(object_ref.Attributes["z_index"].Value);
                         var timeline_id = int.Parse(object_ref.Attributes["timeline"].Value);
-                        
+
                         // now need to get corresponding timeline object ref
                         var timeline_node = timelineMap[timeline_id];
                         // unwrap the <timeline><key> to get the <object> tags.
@@ -341,136 +325,122 @@ namespace kanimal
                             .GetElements()
                             .ToArray();
 
-                        var frame_id = int.Parse(object_ref.Attributes["key"].Value);
+                        var frameId = int.Parse(object_ref.Attributes["key"].Value);
                         XmlElement frame_node;
                         try
                         {
-                            frame_node = getFrameFromTimeline(timeline_node, frame_id);
-                        } catch (ProjectParseException)
+                            frame_node = getFrameFromTimeline(timeline_node, frameId);
+                        }
+                        catch (ProjectParseException)
                         {
-                            Logger.Warn($"Could not find frame {frame_id} in timeline {timeline_id} of anim \"{bank.Name}\"!");
+                            Logger.Warn(
+                                $"Could not find frame {frameId} in timeline {timeline_id} of anim \"{bank.Name}\"!");
                             continue; // skip this element.
                         }
 
                         var frame_object_node = frame_node.GetElementsByTagName("object")[0];
-                        
+
                         // Figure out the file id from the timeline's keyframe
-                            var image_node = projectFileIdMap[frame_object_node.Attributes["file"].Value];
-                            var imageName = image_node.Attributes["name"].Value;
+                        var image_node = projectFileIdMap[frame_object_node.Attributes["file"].Value];
+                        var imageName = image_node.Attributes["name"].Value;
 
-                            element.Image = Utilities.KleiHash(Utilities.GetSpriteBaseName(imageName));
-                            element.Index = Utilities.GetFrameCount(imageName);
-                            // layer doesn't seem to actually be used for anything after it is parsed as a "folder"
-                            // but it does need to have an associated string in the hash table so we will just
-                            // write layer as the same as the image being used
-                            element.Layer = element.Image;
-                            // Add this info to the AnimHashes dict
-                            AnimHashes[element.Image] = Utilities.GetSpriteBaseName(imageName);
-                            AnimHashes[element.Layer] = AnimHashes[element.Image];
-                            
-                            // spriter animation files don't repeat data if it is unchanged between frames
-                            // for an object so we have to track the last know value of the data and use
-                            // that if we don't see it
-                            // TODO: Spriter actually interpolates values as well, so we should add better logic
-                            // so that we get the expected behaviour rather than a sudden jump.
-                            
-                            // find the interpolated value if required
-                            // First, check if the timeline frame's timestamp is different to the key's.
-                            // If yes, that means we need to interpolate the entire value depending on previous or
-                            // following nodes
-                            var frameTime = frame_node.GetDefault("time", 0);
-                            var mainlineTime = mainline_key.GetDefault("time", 0);
-                            
-                            float Interpolate(string attrName, float defaultValue)
-                            {
-                                // If our timeline key node actually has the attr value and is ours',
-                                // we can simply get the value.
-                                if (frameTime == mainlineTime && frame_object_node.Attributes[attrName] != null)
-                                {
-                                    return float.Parse(frame_object_node.Attributes[attrName].Value);
-                                }
-                                
-                                // otherwise: we need to find the last timeline key node that has our value.
-                                // also find the next timeline key node that has our value, then interpolate.
-                                XmlNode prev = null, next = null;
-                                if (frame_id >= 0)
-                                {
-                                    prev = timeline_keys[frame_id];
-                                }
+                        element.Image = Utilities.KleiHash(Utilities.GetSpriteBaseName(imageName));
+                        element.Index = Utilities.GetFrameCount(imageName);
+                        // layer doesn't seem to actually be used for anything after it is parsed as a "folder"
+                        // but it does need to have an associated string in the hash table so we will just
+                        // write layer as the same as the image being used
+                        element.Layer = element.Image;
+                        // Add this info to the AnimHashes dict
+                        AnimHashes[element.Image] = Utilities.GetSpriteBaseName(imageName);
+                        AnimHashes[element.Layer] = AnimHashes[element.Image];
 
-                                if (frame_id < timeline_keys.Length - 1)
-                                {
-                                    next = timeline_keys[frame_id + 1];
-                                }
+                        // find the interpolated value if required
+                        // First, check if the timeline frame's timestamp is different to the key's.
+                        // If yes, that means we need to interpolate the entire value depending on previous or
+                        // following nodes
+                        var frameTime = frame_node.GetDefault("time", 0);
+                        var mainlineTime = mainline_key.GetDefault("time", 0);
 
-                                // if we haven't found a prev node, that means our value is simply default.
-                                if (prev == null)
-                                    return defaultValue;
-                                // No next node means use the previous value
-                                if (next == null)
-                                    return prev.FirstElementChild().GetDefault(attrName, defaultValue);
+                        float Interpolate(string attrName, float defaultValue)
+                        {
+                            // If our timeline key node actually has the attr value and is ours',
+                            // we can simply get the value.
+                            if (frameTime == mainlineTime && frame_object_node.Attributes[attrName] != null)
+                                return float.Parse(frame_object_node.Attributes[attrName].Value);
 
-                                // otherwise, gotta lerp
-                                return prev.Interpolate(next, mainlineTime, attrName, defaultValue);
-                            }
-                            
-                            var scaleX = Interpolate("scale_x", 1f);
-                            var scaleY = Interpolate("scale_y", 1f);
-                            var angle = Interpolate("angle", 0f);
-                            var xOffset = Interpolate("x", 0f);
-                            var yOffset = Interpolate("y", 0f);
-                            
-                            
+                            // otherwise: we need to find the last timeline key node that has our value.
+                            // also find the next timeline key node that has our value, then interpolate.
+                            XmlNode prev = null, next = null;
+                            if (frameId >= 0) prev = timeline_keys[frameId];
 
-                            var animdata = new AnimationData
-                            {
-                                ScaleX = scaleX,
-                                ScaleY = scaleY,
-                                Angle = angle,
-                                X = xOffset,
-                                Y = yOffset
-                            };
-                            lastDataMap[timeline_id] = animdata;
-                            element.M5 = xOffset * 2;
-                            element.M6 = -yOffset * 2;
-                            var angleRad = Math.PI / 180 * angle;
-                            var sin = (float) Math.Sin(angleRad);
-                            var cos = (float) Math.Cos(angleRad);
-                            element.M1 = scaleX * cos;
-                            element.M2 = scaleX * -sin;
-                            element.M3 = scaleY * sin;
-                            element.M4 = scaleY * cos;
+                            if (frameId < timeline_keys.Length - 1) next = timeline_keys[frameId + 1];
 
-                            // calculate transformed bounds of this element
-                            // note that we actually need the pivot of the element in order to determine where the
-                            // element is located b/c the pivot acts as 0,0 for the x and y offsets
-                            // additionally it is necessary b/c rotation is done aroudn the pivot
-                            // (mathematically compute this as rotation around the origin just composed with
-                            // translating the pivot to and from the origin)
-                            var pivotX = float.Parse(image_node.Attributes["pivot_x"].Value);
-                            var pivotY = float.Parse(image_node.Attributes["pivot_y"].Value);
-                            var width = int.Parse(image_node.Attributes["width"].Value);
-                            var height = int.Parse(image_node.Attributes["height"].Value);
-                            pivotX *= width;
-                            pivotY *= height;
-                            var centerX = pivotX + xOffset;
-                            var centerY = pivotY + yOffset;
-                            var x2 = xOffset + width;
-                            var y2 = yOffset + width;
-                            var p1 = new PointF(xOffset, yOffset);
-                            var p2 = new PointF(x2, yOffset);
-                            var p3 = new PointF(x2, y2);
-                            var p4 = new PointF(xOffset, y2);
-                            p1 = p1.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
-                            p2 = p2.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
-                            p3 = p3.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
-                            p4 = p4.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
-                            minX = Utilities.Min(minX, p1.X, p2.X, p3.X, p4.X);
-                            minY = Utilities.Min(minY, p1.Y, p2.Y, p3.Y, p4.Y);
-                            frame.Elements.Add(element);
-                            elementCount++;
+                            // if we haven't found a prev node, that means our value is simply default.
+                            if (prev == null)
+                                return defaultValue;
+                            // No next node means use the previous value
+                            if (next == null)
+                                return prev.FirstElementChild().GetDefault(attrName, defaultValue);
+
+                            // otherwise, gotta lerp
+                            return prev.Interpolate(next, mainlineTime, attrName, defaultValue);
+                        }
+
+                        var scaleX = Interpolate("scale_x", 1f);
+                        var scaleY = Interpolate("scale_y", 1f);
+                        var angle = Interpolate("angle", 0f);
+                        var xOffset = Interpolate("x", 0f);
+                        var yOffset = Interpolate("y", 0f);
+
+
+                        var animdata = new AnimationData
+                        {
+                            ScaleX = scaleX,
+                            ScaleY = scaleY,
+                            Angle = angle,
+                            X = xOffset,
+                            Y = yOffset
+                        };
+                        element.M5 = xOffset * 2;
+                        element.M6 = -yOffset * 2;
+                        var angleRad = Math.PI / 180 * angle;
+                        var sin = (float) Math.Sin(angleRad);
+                        var cos = (float) Math.Cos(angleRad);
+                        element.M1 = scaleX * cos;
+                        element.M2 = scaleX * -sin;
+                        element.M3 = scaleY * sin;
+                        element.M4 = scaleY * cos;
+
+                        // calculate transformed bounds of this element
+                        // note that we actually need the pivot of the element in order to determine where the
+                        // element is located b/c the pivot acts as 0,0 for the x and y offsets
+                        // additionally it is necessary b/c rotation is done aroudn the pivot
+                        // (mathematically compute this as rotation around the origin just composed with
+                        // translating the pivot to and from the origin)
+                        var pivotX = float.Parse(image_node.Attributes["pivot_x"].Value);
+                        var pivotY = float.Parse(image_node.Attributes["pivot_y"].Value);
+                        var width = int.Parse(image_node.Attributes["width"].Value);
+                        var height = int.Parse(image_node.Attributes["height"].Value);
+                        pivotX *= width;
+                        pivotY *= height;
+                        var centerX = pivotX + xOffset;
+                        var centerY = pivotY + yOffset;
+                        var x2 = xOffset + width;
+                        var y2 = yOffset + width;
+                        var p1 = new PointF(xOffset, yOffset);
+                        var p2 = new PointF(x2, yOffset);
+                        var p3 = new PointF(x2, y2);
+                        var p4 = new PointF(xOffset, y2);
+                        p1 = p1.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
+                        p2 = p2.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
+                        p3 = p3.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
+                        p4 = p4.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
+                        minX = Utilities.Min(minX, p1.X, p2.X, p3.X, p4.X);
+                        minY = Utilities.Min(minY, p1.Y, p2.Y, p3.Y, p4.Y);
+                        frame.Elements.Add(element);
+                        elementCount++;
                     }
-                    
+
                     frame.Elements.Sort((e1, e2) => -e1.ZIndex.CompareTo(e2.ZIndex));
                     frame.X = (minX + maxX) / 2f;
                     frame.Y = (minY + maxY) / 2f;
@@ -481,13 +451,13 @@ namespace kanimal
                 }
 
                 bank.FrameCount = frameCount;
-                bank.Rate = (float)Utilities.MS_PER_S / interval;
+                bank.Rate = (float) Utilities.MS_PER_S / interval;
                 AnimData.Anims.Add(bank);
             }
 
             if (hasInconsistentIntervals)
             {
-                var anims = InconsistentAnims.ToList().Join();
+                var anims = inconsistentAnims.ToList().Join();
                 throw new ProjectParseException(
                     $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.");
             }
@@ -500,19 +470,15 @@ namespace kanimal
             foreach (var key in timeline.ChildNodes.GetElements())
             {
                 if (key.Name != "key")
-                {
                     throw new ProjectParseException(
                         $"SCML format exception: all children of <timeline> must be <key>, was <{key.Name}> instead.");
-                }
 
-                if (int.Parse(key.Attributes["id"].Value) == frameId)
-                {
-                    return key;
-                }
+                if (int.Parse(key.Attributes["id"].Value) == frameId) return key;
             }
+
             throw new ProjectParseException(
                 $"Expected to find frame {frameId} in timeline "
-            + $"{timeline.Attributes["id"]} of anim {timeline.ParentNode.Attributes["name"].Value}");
+                + $"{timeline.Attributes["id"]} of anim {timeline.ParentNode.Attributes["name"].Value}");
         }
 
         private void SetAggregateData()
@@ -530,16 +496,13 @@ namespace kanimal
 
                 var anim = (XmlElement) child;
                 if (anim.Name != "animation")
-                {
                     throw new ProjectParseException(
                         $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
-                }
 
-                var timelines = anim.ChildNodes;
                 var mainline = anim.GetElementsByTagName("mainline")[0];
                 var keyframes = mainline.ChildNodes;
 
-                for (int frameIndex = 0; frameIndex < keyframes.Count; frameIndex++)
+                for (var frameIndex = 0; frameIndex < keyframes.Count; frameIndex++)
                 {
                     if (!(keyframes[frameIndex] is XmlElement))
                     {
@@ -549,10 +512,8 @@ namespace kanimal
 
                     var keyframe = (XmlElement) keyframes[frameIndex];
                     if (keyframe.Name != "key")
-                    {
                         throw new ProjectParseException(
                             $"SCML format exception: all children of <animation> should be <key>, was <{keyframe.Name}> instead.");
-                    }
 
                     var objects = keyframe.ChildNodes;
                     foreach (var obj in objects)
@@ -565,15 +526,10 @@ namespace kanimal
 
                         var element = (XmlElement) obj;
                         if (element.Name != "object_ref")
-                        {
                             throw new ProjectParseException(
                                 $"SCML format exception: all children of <key> should be <object_ref>, was <{element.Name}> instead.");
-                        }
 
-                        if (objects.Count > maxVisibleSymbolFrames)
-                        {
-                            maxVisibleSymbolFrames = objects.Count;
-                        }
+                        if (objects.Count > maxVisibleSymbolFrames) maxVisibleSymbolFrames = objects.Count;
                     }
                 }
             }
@@ -583,7 +539,7 @@ namespace kanimal
             AnimData.ElementCount = 0;
             AnimData.MaxVisibleSymbolFrames = maxVisibleSymbolFrames;
         }
-        
+
         private void SetSymbolsAndFrames(List<PackedSprite> sprites)
         {
             BuildData.SymbolCount = 0;
@@ -593,10 +549,7 @@ namespace kanimal
                 BuildData.FrameCount++;
 
                 var frameCount = Utilities.GetFrameCount(sprite.Name);
-                if (frameCount == 0)
-                {
-                    BuildData.SymbolCount++;
-                }
+                if (frameCount == 0) BuildData.SymbolCount++;
             }
         }
     }

@@ -17,19 +17,17 @@ namespace kanimal
         protected Dictionary<int, string> AnimHashes;
         protected Dictionary<string, string> FilenameIndex;
         protected List<Sprite> Sprites;
-        protected Reader reader;
+        protected Reader Reader;
 
         public abstract void Save(string path);
-        
+
         // Outputs sprites to the output directory rather than doing anything else with them. 
-        public void SaveSprites(string outputdir)
+        public void SaveSprites(string outputDirectory)
         {
-            Directory.CreateDirectory(outputdir);
+            Directory.CreateDirectory(outputDirectory);
             foreach (var sprite in Sprites)
-            {
-                sprite.Bitmap.Save(Path.Join(outputdir, sprite.Name + ".png"), ImageFormat.Png);
-            }
-            Logger.Info($"Saved sprites to {outputdir}.");
+                sprite.Bitmap.Save(Path.Join(outputDirectory, sprite.Name + ".png"), ImageFormat.Png);
+            Logger.Info($"Saved sprites to {outputDirectory}.");
         }
     }
 }
