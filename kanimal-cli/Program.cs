@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NLog;
 using CommandLine;
 using kanimal;
+using NLog;
+using NLog.Config;
+using NLog.Targets;
 
 namespace kanimal_cli
 {
@@ -14,8 +16,8 @@ namespace kanimal_cli
 
         private static void SetVerbosity(ProgramOptions o)
         {
-            var config = new NLog.Config.LoggingConfiguration();
-            var targetConsole = new NLog.Targets.ConsoleTarget("logconsole");
+            var config = new LoggingConfiguration();
+            var targetConsole = new ConsoleTarget("logconsole");
             targetConsole.Layout = "[${level}] ${message}";
 
             if (o.Verbose && o.Silent)
