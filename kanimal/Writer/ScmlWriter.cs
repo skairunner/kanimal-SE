@@ -34,6 +34,7 @@ namespace kanimal
 
             // Finally, output to a file
             var writer = new XmlTextWriter(path, Encoding.Unicode);
+            writer.Formatting = Formatting.Indented;
             Scml.WriteTo(writer);
             writer.Flush();
         }
