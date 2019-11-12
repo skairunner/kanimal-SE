@@ -88,7 +88,12 @@ namespace kanimal
         {
             BuildData = new Build();
             BuildData.Version = 10; // magic number
-            SetSymbolsAndFrames(texture.SpriteAtlas);
+//            SetSymbolsAndFrames(texture.SpriteAtlas);
+            
+            // need to keep track of symbols and frames, otherwise missing sprites will cause death
+            var symbolSet = new HashSet<string>();
+            var frameCount = 0;
+            
             BuildData.Name = scml.GetElementsByTagName("entity")[0].Attributes["name"].Value;
             var histogram = texture.GetHistogram();
             var hashTable = new Dictionary<string, int>();
@@ -142,15 +147,29 @@ namespace kanimal
                 frame.PivotHeight = sprite.Height * 2;
 
                 // Find the appropriate pivot from the scml
-                var scmlnode = projectSprites[$"{sprite.BaseName}_{frame.SourceFrameNum}"];
-                frame.PivotX = -(float.Parse(scmlnode.Attributes["pivot_x"].Value) - 0.5f) * frame.PivotWidth;
-                frame.PivotY = (float.Parse(scmlnode.Attributes["pivot_y"].Value) - 0.5f) * frame.PivotHeight;
-                BuildData.Symbols[symbolIndex].Frames.Add(frame);
+                try
+                {
+                    var scmlnode = projectSprites[$"{sprite.BaseName}_{frame.SourceFrameNum}"];
+                    frame.PivotX = -(float.Parse(scmlnode.Attributes["pivot_x"].Value) - 0.5f) * frame.PivotWidth;
+                    frame.PivotY = (float.Parse(scmlnode.Attributes["pivot_y"].Value) - 0.5f) * frame.PivotHeight;
+                    BuildData.Symbols[symbolIndex].Frames.Add(frame);
+                    
+                    // Also add to census
+                    symbolSet.Add(sprite.BaseName);
+                    frameCount++;
+                }
+                catch (KeyNotFoundException)
+                {
+                    Logger.Warn($"The sprite \"{sprite.BaseName}_{frame.SourceFrameNum}\" was not used in the scml. Skipping.");
+                }
             }
 
             // Finally, flip the key/values to get the build hash table
             BuildHashes = new Dictionary<int, string>();
             foreach (var entry in hashTable) BuildHashes[entry.Value] = entry.Key;
+
+            BuildData.FrameCount = frameCount;
+            BuildData.SymbolCount = symbolSet.Count;
 
             BuildBuildTable(texture.SpriteSheet.Width, texture.SpriteSheet.Height);
         }
@@ -181,6 +200,11 @@ namespace kanimal
             var entity = scml.GetElementsByTagName("entity")[0];
             foreach (var animation in entity.ChildNodes.GetElements())
             {
+                // TODO: Add bone support
+                if (animation.Name == "obj_info")
+                {
+                    continue;
+                }
                 if (animation.Name != "animation")
                     throw new ProjectParseException(
                         $"SCML format exception: all children of <entity> should be <animation>, but was <{animation.Name}> instead.");
@@ -215,6 +239,11 @@ namespace kanimal
             foreach (var anim in animations)
             {
                 animCount++;
+                // TODO: IMplement bone support
+                if (anim.Name == "obj_info")
+                {
+                    continue;
+                }
                 if (anim.Name != "animation")
                     throw new ProjectParseException(
                         $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
@@ -299,6 +328,12 @@ namespace kanimal
                     {
                         var object_ref = object_refs[i];
 
+                        // TODO: Add bone support
+                        if (object_ref.Name == "bone_ref")
+                        {
+                            continue;
+                        }
+
                         if (object_ref.Name != "object_ref")
                             throw new ProjectParseException(
                                 $"SCML format exception: all children of <key> must be <object_ref>, was <{object_ref.Name}> instead.");
@@ -341,6 +376,11 @@ namespace kanimal
                         var frame_object_node = frame_node.GetElementsByTagName("object")[0];
 
                         // Figure out the file id from the timeline's keyframe
+                        if (frame_object_node.Attributes["file"] == null)
+                        {
+                            Logger.Warn($"Sprite \"{timeline_node.Attributes["name"].Value}\" in animation \"{anim.Attributes["name"].Value}\" does not have a file associated with it. Skipping.");
+                            continue;
+                        }
                         var image_node = projectFileIdMap[frame_object_node.Attributes["file"].Value];
                         var imageName = image_node.Attributes["name"].Value;
 
@@ -457,7 +497,7 @@ namespace kanimal
 
             if (hasInconsistentIntervals)
             {
-                var anims = inconsistentAnims.ToList().Join();
+                var anims = inconsistentAnims.Select(anim => "\"anim\"").ToList().Join();
                 throw new ProjectParseException(
                     $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.");
             }
@@ -495,6 +535,13 @@ namespace kanimal
                 }
 
                 var anim = (XmlElement) child;
+                // skip bones for now.
+                // TODO: Add bones to in-memory format
+                if (anim.Name == "obj_info")
+                {
+                    Logger.Info($"Detected a bone while parsing entity \"{BuildData.Name}\". Bone information will be lost when converting.");
+                    continue;
+                }
                 if (anim.Name != "animation")
                     throw new ProjectParseException(
                         $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
@@ -525,6 +572,15 @@ namespace kanimal
                         }
 
                         var element = (XmlElement) obj;
+                        // TODO: implement bones for in-memory format.
+                        // Skipping for now.
+                        if (element.Name == "bone_ref")
+                        {
+                            Logger.Info(
+                                $"Detected a bone while parsing animation \"{anim.Attributes["name"].Value}\" of anim \"{BuildData.Name}\". Bone information will be lost when converting.");
+                            continue;
+                        }
+                        
                         if (element.Name != "object_ref")
                             throw new ProjectParseException(
                                 $"SCML format exception: all children of <key> should be <object_ref>, was <{element.Name}> instead.");
