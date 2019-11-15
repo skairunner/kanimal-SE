@@ -78,12 +78,16 @@ namespace kanimal_cli
             {
                 case "scml":
                     var scmlWriter = new ScmlWriter(reader);
-                    scmlWriter.Save(Path.Join(outputFormat, $"{reader.BuildData.Name}.scml"));
+                    scmlWriter.Save(Path.Join(opt.OutputPath, $"{reader.BuildData.Name}.scml"));
                     scmlWriter.SaveSprites(opt.OutputPath);
                     break;
                 case "kanim":
                     var kanimWriter = new KanimWriter(reader);
                     kanimWriter.Save(opt.OutputPath);
+                    break;
+                case "gif":
+                    var gifWriter = new GifWriter(reader);
+                    gifWriter.Save(opt.OutputPath);
                     break;
                 default:
                     Logger.Fatal($"The specified output format \"{outputFormat}\" is not recognized.");
