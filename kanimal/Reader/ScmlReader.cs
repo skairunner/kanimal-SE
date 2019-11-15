@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -286,7 +287,6 @@ namespace kanimal
                     // and tracking the max and min of x and y
                     var minX = float.MaxValue;
                     var minY = float.MaxValue;
-                    // TODO: Check if never assigning a min/max value is relevant?
                     var maxX = float.MinValue;
                     var maxY = float.MinValue;
 
@@ -431,12 +431,18 @@ namespace kanimal
                         var p2 = new PointF(x2, yOffset);
                         var p3 = new PointF(x2, y2);
                         var p4 = new PointF(xOffset, y2);
-                        p1 = p1.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
-                        p2 = p2.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
-                        p3 = p3.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
-                        p4 = p4.RotateAround(centerX, centerY, (float) angleRad, scaleX, scaleY);
+                        var points = new[] {p1, p2, p3, p4};
+                        
+                        var pivotMatrix = new Matrix();
+                        pivotMatrix.RotateAt(angle, new PointF(pivotX, pivotY));
+                        pivotMatrix.Scale(scaleX, scaleY, MatrixOrder.Append);
+                        pivotMatrix.TransformPoints(points);
+                        
                         minX = Utilities.Min(minX, p1.X, p2.X, p3.X, p4.X);
                         minY = Utilities.Min(minY, p1.Y, p2.Y, p3.Y, p4.Y);
+                        maxX = Utilities.Max(maxX, p1.X, p2.X, p3.X, p4.X);
+                        maxY = Utilities.Max(maxY, p1.Y, p2.Y, p3.Y, p4.Y);
+
                         frame.Elements.Add(element);
                         elementCount++;
                     }
