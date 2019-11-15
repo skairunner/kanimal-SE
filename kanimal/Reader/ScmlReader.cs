@@ -434,7 +434,7 @@ namespace kanimal
                         var points = new[] {p1, p2, p3, p4};
                         
                         var pivotMatrix = new Matrix();
-                        pivotMatrix.RotateAt(angle, new PointF(pivotX, pivotY));
+                        pivotMatrix.RotateAt(angle, new PointF(centerX, centerY));
                         pivotMatrix.Scale(scaleX, scaleY, MatrixOrder.Append);
                         pivotMatrix.TransformPoints(points);
                         
