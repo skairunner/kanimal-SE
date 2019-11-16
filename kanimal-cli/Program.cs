@@ -72,8 +72,6 @@ namespace kanimal_cli
             Logger.Info($"Successfully read from format {inputFormat}.");
             Logger.Info("Writing...");
 
-            Directory.CreateDirectory(opt.OutputPath);
-
             switch (outputFormat)
             {
                 case "scml":
@@ -110,7 +108,6 @@ namespace kanimal_cli
                     var build = files.Find(path => path.EndsWith("build.bytes"));
                     var anim = files.Find(path => path.EndsWith("anim.bytes"));
 
-                    Directory.CreateDirectory(o.OutputPath);
                     Utilities.Dump =
                         new StreamWriter(new FileStream(Path.Join(o.OutputPath, "dump.log"), FileMode.Create));
                     var reader = new KanimReader(
