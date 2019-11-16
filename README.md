@@ -68,6 +68,7 @@ $ ./kanimal-cli convert -I [INPUT_FORMAT] -O [OUTPUT_FORMAT] [FILES ...]
 ```
 
 Other available switches are as follows:  
+
 | switch | effect |
 |--------|--------|
 | `-o/--output` | Specify an output directory |
