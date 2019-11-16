@@ -47,7 +47,7 @@ namespace kanimal
             }
         }
 
-        public override void Read(string outputDir)
+        public override void Read()
         {
             scml = new XmlDocument();
             scml.Load(scmlpath);

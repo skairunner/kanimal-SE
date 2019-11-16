@@ -314,8 +314,7 @@ namespace kanimal
                     actualHeader);
         }
 
-        // TODO: Include images into the in-memory format & remove outputdir arg for something better
-        public override void Read(string outputDir)
+        public override void Read()
         {
             Logger.Info("Parsing build data.");
             ReadBuildData();

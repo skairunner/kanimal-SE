@@ -51,7 +51,7 @@ namespace kanimal_cli
                 case "scml":
                     var scml = files.Find(path => path.EndsWith(".scml"));
                     reader = new ScmlReader(scml);
-                    reader.Read(opt.OutputPath);
+                    reader.Read();
                     break;
                 case "kanim":
                     var png = files.Find(path => path.EndsWith(".png"));
@@ -61,7 +61,7 @@ namespace kanimal_cli
                         new FileStream(png, FileMode.Open),
                         new FileStream(build, FileMode.Open),
                         new FileStream(anim, FileMode.Open));
-                    reader.Read(opt.OutputPath);
+                    reader.Read();
                     break;
                 default:
                     Logger.Fatal($"The specified input format \"{inputFormat}\" is not recognized.");
@@ -118,7 +118,7 @@ namespace kanimal_cli
                         new FileStream(build, FileMode.Open),
                         new FileStream(anim, FileMode.Open),
                         new FileStream(png, FileMode.Open));
-                    reader.Read(o.OutputPath);
+                    reader.Read();
                     Utilities.Dump.Flush();
                 })
                 .WithParsed<ScmlToKanimOptions>(o => Convert(
