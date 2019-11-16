@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
@@ -15,6 +16,8 @@ namespace kanimal
         protected XmlDocument Scml;
         protected XmlElement SpriterRoot;
         protected XmlElement Entity;
+
+        public bool FillMissingSprites = true; // When true, if a file is referenced in frames but doesn't exist as a sprite, add it as a blank 1x1 sprite.
 
         public ScmlWriter(Reader reader)
         {
@@ -214,6 +217,35 @@ namespace kanimal
                     var object_def = Scml.CreateElement("object");
                     object_def.SetAttribute("folder", "0");
                     var filename = element.FindFilename(AnimHashes);
+
+                    if (!FilenameIndex.ContainsKey(filename))
+                    {
+                        if (FillMissingSprites)
+                        {
+                            // Must generate the missing sprite.
+                            var sprite = new Sprite
+                            {
+                                Bitmap = new Bitmap(1, 1),
+                                Name = filename
+                            };
+                            Sprites.Add(sprite);
+                            // Also add it to the Spriter file
+                            FilenameIndex[filename] = (BuildData.FrameCount + 1).ToString();
+                            var fileNode = Scml.CreateElement("file");
+                            fileNode.SetAttribute("id", FilenameIndex[filename]);
+                            fileNode.SetAttribute("name", filename);
+                            fileNode.SetAttribute("width", 1.ToString());
+                            fileNode.SetAttribute("height", 1.ToString());
+                            fileNode.SetAttribute("pivot_x", 0f.ToString("G9"));
+                            fileNode.SetAttribute("pivot_y", 0f.ToString("G9"));
+                            var folderNode = SpriterRoot.GetElementsByTagName("folder")[0];
+                            folderNode.AppendChild(fileNode);
+                        }
+                        else
+                        {
+                            throw new ProjectParseException($"Animation \"{bank.Name}\" in \"{BuildData.Name}\" referenced a sprite \"{filename}\" that doesn't exist.");
+                        }
+                    }
 
                     object_def.SetAttribute("file", FilenameIndex[filename]);
                     object_def.SetAttribute("x", (trans.X * 0.5f).ToString("G5"));
