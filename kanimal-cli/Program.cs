@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using NLog;
 using CommandLine;
 using kanimal;
+using NLog.Config;
+using NLog.Filters;
+using NLog.Fluent;
 
 namespace kanimal_cli
 {
@@ -12,7 +16,7 @@ namespace kanimal_cli
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        private static void SetVerbosity(ProgramOptions o)
+        private static LoggingConfiguration GetLoggerConfig(ProgramOptions o)
         {
             var config = new NLog.Config.LoggingConfiguration();
             var targetConsole = new NLog.Targets.ConsoleTarget("logconsole");
@@ -31,10 +35,15 @@ namespace kanimal_cli
             else
                 config.AddRule(LogLevel.Info, LogLevel.Fatal, targetConsole);
 
-            LogManager.Configuration = config;
+            return config;
+        }
+        
+        private static void SetVerbosity(ProgramOptions o)
+        {
+            LogManager.Configuration = GetLoggerConfig(o);
         }
 
-        private static void Convert(string inputFormat, string outputFormat, List<string> files, ProgramOptions opt)
+        private static void Convert(string inputFormat, string outputFormat, List<string> files, ConversionOptions opt)
         {
             SetVerbosity(opt);
 
@@ -57,10 +66,11 @@ namespace kanimal_cli
                     var png = files.Find(path => path.EndsWith(".png"));
                     var build = files.Find(path => path.EndsWith("build.bytes"));
                     var anim = files.Find(path => path.EndsWith("anim.bytes"));
+
                     reader = new KanimReader(
-                        new FileStream(png, FileMode.Open),
                         new FileStream(build, FileMode.Open),
-                        new FileStream(anim, FileMode.Open));
+                        new FileStream(anim, FileMode.Open),
+                        new FileStream(png, FileMode.Open));
                     reader.Read();
                     break;
                 default:
@@ -76,6 +86,7 @@ namespace kanimal_cli
             {
                 case "scml":
                     var scmlWriter = new ScmlWriter(reader);
+                    scmlWriter.FillMissingSprites = !opt.Strict;
                     scmlWriter.SaveToDir(Path.Join(opt.OutputPath));
                     break;
                 case "kanim":
@@ -93,7 +104,7 @@ namespace kanimal_cli
 
         private static void Main(string[] args)
         {
-            Parser.Default.ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, GenericOptions, DumpOptions>(args)
+            Parser.Default.ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, GenericOptions, DumpOptions, BatchConvertOptions>(args)
                 .WithParsed<KanimToScmlOptions>(o => Convert(
                     "kanim",
                     "scml",
@@ -107,7 +118,7 @@ namespace kanimal_cli
                     var png = files.Find(path => path.EndsWith(".png"));
                     var build = files.Find(path => path.EndsWith("build.bytes"));
                     var anim = files.Find(path => path.EndsWith("anim.bytes"));
-
+                    Directory.CreateDirectory(o.OutputPath);
                     Utilities.Dump =
                         new StreamWriter(new FileStream(Path.Join(o.OutputPath, "dump.log"), FileMode.Create));
                     var reader = new KanimReader(
@@ -122,7 +133,76 @@ namespace kanimal_cli
                     "kanim",
                     new List<string> {o.ScmlFile},
                     o))
-                .WithParsed<GenericOptions>(o => Convert(o.InputFormat, o.OutputFormat, o.Files.ToList(), o));
+                .WithParsed<GenericOptions>(o => Convert(o.InputFormat, o.OutputFormat, o.Files.ToList(), o))
+                .WithParsed<BatchConvertOptions>(o =>
+                {
+                    // Silence Info output from kanimal
+                    var config = new LoggingConfiguration();
+                    var target = new NLog.Targets.ConsoleTarget("logconsole");
+                    target.Layout = "[${level}] ${message}";
+                    var loggingRule1 = new LoggingRule("kanimal_cli.*", target);
+                    loggingRule1.SetLoggingLevels(LogLevel.Info, LogLevel.Fatal);
+                    config.LoggingRules.Add(loggingRule1);
+                    var loggingRule2 = new LoggingRule("kanimal.*", target);
+                    loggingRule2.SetLoggingLevels(LogLevel.Warn, LogLevel.Fatal);
+                    config.LoggingRules.Add(loggingRule2);
+                    LogManager.Configuration = config;
+
+                    if (!Directory.Exists(Path.Join(o.AssetDirectory, "Texture2D")))
+                    {
+                        Logger.Fatal($"The path \"{o.AssetDirectory}/Texture2D\" does not exist.");
+                        Environment.Exit((int)ExitCodes.IncorrectArguments);
+                    }
+                    if (!Directory.Exists(Path.Join(o.AssetDirectory, "TextAsset")))
+                    {
+                        Logger.Fatal($"The path \"{o.AssetDirectory}/TextAsset\" does not exist.");
+                        Environment.Exit((int)ExitCodes.IncorrectArguments);
+                    }
+
+                    foreach (var filepath in Directory.GetFiles(Path.Join(o.AssetDirectory, "Texture2D"), "*.png"))
+                    {
+                        var filename = Path.GetFileName(filepath);
+                        var basename = Utilities.GetSpriteBaseName(filename);
+                        if (basename == "")
+                        {
+                            Logger.Warn($"Skipping \"{filename}\" as it does not seem to be a valid anim.");
+                            continue;
+                        }
+                        var png = new FileStream(filepath, FileMode.Open);
+
+                        var animPath = Path.Join(o.AssetDirectory, "TextAsset", $"{basename}_anim.bytes");
+                        var buildPath = Path.Join(o.AssetDirectory, "TextAsset", $"{basename}_build.bytes");
+                        if (!File.Exists(animPath))
+                        {
+                            Logger.Warn($"Skipping \"{basename}\" because it does not have a corresponding anim.bytes file.");
+                            continue;
+                        }
+
+                        if (!File.Exists(buildPath))
+                        {
+                            Logger.Warn($"Skipping \"{basename}\" because it does not have a corresponding build.bytes file.");
+                            continue;
+                        }
+                        var anim = new FileStream(animPath, FileMode.Open);
+                        var build = new FileStream(buildPath, FileMode.Open);
+                        
+                        var reader = new KanimReader(build, anim, png);
+                        try
+                        {
+                            reader.Read();
+                            var writer = new ScmlWriter(reader);
+                            writer.SaveToDir(Path.Join(o.OutputPath, reader.BuildData.Name));
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Error($"The following error occured while exporting \"{reader.BuildData.Name}\":");
+                            Logger.Error(e.ToString());
+                            Logger.Error("Skipping.");
+                            continue;
+                        }
+                        Logger.Info($"Exported \"{reader.BuildData.Name}\".");
+                    }
+                });
         }
     }
 }

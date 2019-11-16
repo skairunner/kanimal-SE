@@ -15,6 +15,12 @@ namespace kanimal_cli
         public string OutputPath { get; set; } = "output";
     }
 
+    internal abstract class ConversionOptions : ProgramOptions
+    {
+        [Option('S', "strict", Required = false, HelpText = "When writing to scml, enabling this flag ")]
+        public bool Strict { get; set; }
+    }
+
     [Verb("dump", HelpText = "Output a dump of the specified kanim.")]
     internal class DumpOptions : ProgramOptions
     {
@@ -23,7 +29,7 @@ namespace kanimal_cli
 
     // For ones with Output and Input specifiers
     [Verb("convert", HelpText = "Convert between formats.")]
-    internal class GenericOptions : ProgramOptions
+    internal class GenericOptions : ConversionOptions
     {
         [Option('I', "input-format", Required = true, HelpText = "The input format, from [kanim, scml]")]
         public string InputFormat { get; set; }
@@ -35,14 +41,20 @@ namespace kanimal_cli
     }
 
     [Verb("scml", HelpText = "Convert kanim to scml. Convenience verb equivalent to 'convert -I kanim -O scml'.")]
-    internal class KanimToScmlOptions : ProgramOptions
+    internal class KanimToScmlOptions : ConversionOptions
     {
         [Value(0)] public IEnumerable<string> Files { get; set; }
     }
 
     [Verb("kanim", HelpText = "Convert scml to kanim. Convenience verb equivalent to 'convert -I scml -O kanim'.")]
-    internal class ScmlToKanimOptions : ProgramOptions
+    internal class ScmlToKanimOptions : ConversionOptions
     {
         [Value(0)] public string ScmlFile { get; set; }
+    }
+
+    [Verb("batch-convert", HelpText = "Given an Assets/ directory, attempt to batch convert kanim to scml.")]
+    internal class BatchConvertOptions : ConversionOptions
+    {
+        [Value(0)] public string AssetDirectory { get; set; }
     }
 }

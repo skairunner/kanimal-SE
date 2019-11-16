@@ -34,6 +34,17 @@ To specify a directory, you can use the `-o/--output` switch:
 $ kanimal-cli.exe kanim [NAME].png [NAME]_anim.bytes [NAME]_build.bytes -o my/output/path
 ```
 
+#### Batch conversion
+
+It is possible to batch convert *Oxygen Not Included* assets to Spriter files.
+
+1. Unpack the Unity asset bundles. Ensure that the root directory is `Assets`, which contains `Texture2D` and `TextAsset`.
+2. Run the following command:
+```
+$ kanimal-cli batch-convert /path/to/assets/directory
+```
+3. The result files will be output in the `output/` directory relative to the current working directory. You can specify a different path with the `-o/--output` flag, as always. 
+
 ### scml → kanim
 The process is very similar to the previous one.
 
@@ -56,12 +67,13 @@ Just like in the kanim → scml case, the files are output by default into the `
 $ ./kanimal-cli convert -I [INPUT_FORMAT] -O [OUTPUT_FORMAT] [FILES ...]
 ```
 
-Other available switches are as follows:
+Other available switches are as follows:  
 | switch | effect |
 |--------|--------|
 | `-o/--output` | Specify an output directory |
 | `-v/--verbose` | Set verbosity level to DEBUG (default INFO)|
 | `-s/--silent` | Set verbosity level to FATAL (default INFO). This means no messages are logged on successful conversion, including warnings. |
+|`-S/--strict` | Enforce strict conversion.|
 
 ### Kanim dump
 KSE supports dumping the contents of a kanim file to a (relatively) readable text file. The command is:
