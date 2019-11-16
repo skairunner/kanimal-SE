@@ -17,8 +17,7 @@ namespace kanimal
         public KAnim.Anim AnimData;
         public List<Sprite> Sprites;
 
-        // Read the file at the given path and populate the above data entries.
-        // Sprites are output at the directory.
+        // Read the file specified in the constructor and populate the above data entries.
         public abstract void Read();
 
         // Build the table by reading from hashTable and buildData

@@ -23,14 +23,29 @@ namespace kanimal
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         private XmlDocument scml;
-        private string scmlpath;
         private Dictionary<string, XmlElement> projectSprites; // quick lookup for the sprites incl in project
         private Dictionary<string, XmlElement> projectFileIdMap; // quick lookup for the anims incl in project
         private TexturePacker textures;
+        private Dictionary<string, Bitmap> inputSprites;
 
+        public ScmlReader(Stream scmlStream, Dictionary<string, Bitmap> sprites)
+        {
+            scml = new XmlDocument();
+            scml.Load(scmlStream);
+            inputSprites = sprites;
+        }
+        
         public ScmlReader(string scmlpath)
         {
-            this.scmlpath = scmlpath;
+            scml = new XmlDocument();
+            scml.Load(scmlpath);
+            // Due to scml conventions, our input directory is the same as the scml file's
+            var inputDir = Path.Join(scmlpath, "../");
+            inputSprites = new Dictionary<string, Bitmap>();
+            foreach (var filename in Directory.GetFiles(inputDir, "*.png", SearchOption.TopDirectoryOnly))
+            {
+                inputSprites[Path.GetFileName(filename)] = new Bitmap(filename);
+            }
         }
 
         private void ReadProjectSprites()
@@ -49,25 +64,17 @@ namespace kanimal
 
         public override void Read()
         {
-            scml = new XmlDocument();
-            scml.Load(scmlpath);
             Logger.Info("Reading image files.");
             ReadProjectSprites();
-            // Due to scml conventions, our input directory is the same as the scml file's
-            var inputDir = Path.Join(scmlpath, "../");
-            var sprites = Directory
-                .GetFiles(inputDir, "*.png", SearchOption.TopDirectoryOnly)
-                .Select(filename => new Tuple<string, Bitmap>(
-                    Utilities.WithoutExtension(Path.GetFileName(filename)),
-                    new Bitmap(filename)))
-                .ToList();
 
             // Also set the output list of sprites
             Sprites = new List<Sprite>();
-            Sprites = sprites.Select(sprite => new Sprite {Bitmap = sprite.Item2, Name = sprite.Item1}).ToList();
+            Sprites = inputSprites.Select(sprite => new Sprite {Bitmap = sprite.Value, Name = sprite.Key}).ToList();
 
             Logger.Info("Reading build info.");
-            textures = new TexturePacker(sprites);
+            textures = new TexturePacker(inputSprites.Select(
+                    s => new Tuple<string, Bitmap>(s.Key, s.Value))
+                .ToList());
             // Sort packed sprites by name to facilitate build packing later on, bc it has flaky logic
             // and will otherwise fail
             textures.SpriteAtlas.Sort(
