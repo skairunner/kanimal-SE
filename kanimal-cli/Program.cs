@@ -85,10 +85,6 @@ namespace kanimal_cli
                     var kanimWriter = new KanimWriter(reader);
                     kanimWriter.Save(opt.OutputPath);
                     break;
-                case "gif":
-                    var gifWriter = new GifWriter(reader);
-                    gifWriter.Save(opt.OutputPath);
-                    break;
                 default:
                     Logger.Fatal($"The specified output format \"{outputFormat}\" is not recognized.");
                     Environment.Exit((int) ExitCodes.IncorrectArguments);
