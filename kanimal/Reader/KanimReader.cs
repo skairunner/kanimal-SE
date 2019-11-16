@@ -252,8 +252,17 @@ namespace kanimal
                             M6 = reader.ReadSingle(),
                             Order = reader.ReadSingle()
                         };
+
+                        string plainName;
+                        try
+                        {
+                            plainName = $"(\"{BuildHashes[element.Image]}\")";
+                        } catch (KeyNotFoundException)
+                        {
+                            plainName = "(plain name not found)";
+                        }
                         Utilities.LogToDump(
-                            $"      Sub-element #{element.Index} is {element.Image} (\"{BuildHashes[element.Image]}\") @ layer {element.Layer}\n" +
+                            $"      Sub-element #{element.Index} is {element.Image} {plainName} @ layer {element.Layer}\n" +
                             $"        Matrix: ({element.M1} {element.M2} {element.M3} {element.M4}), translate {element.M5} {element.M6}. Order {element.Order}",
                             Logger);
 
