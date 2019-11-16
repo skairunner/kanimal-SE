@@ -19,15 +19,34 @@ namespace kanimal
         protected List<Sprite> Sprites;
         protected Reader Reader;
 
-        public abstract void Save(string path);
+        public abstract OutputFiles Save();
 
-        // Outputs sprites to the output directory rather than doing anything else with them. 
-        public void SaveSprites(string outputDirectory)
+        // Invoke Save, then output all artifacts to the provided path
+        public abstract void SaveToDir(string path);
+    }
+
+    // It's just a filename to stream mapping.
+    public class OutputFiles: Dictionary<string, Stream>
+    {
+        // Reset all stream seek heads to 0 from start
+        public void Rewind()
         {
-            Directory.CreateDirectory(outputDirectory);
-            foreach (var sprite in Sprites)
-                sprite.Bitmap.Save(Path.Join(outputDirectory, sprite.Name + ".png"), ImageFormat.Png);
-            Logger.Info($"Saved sprites to {outputDirectory}.");
+            foreach (var entry in this)
+            {
+                entry.Value.Seek(0, SeekOrigin.Begin);
+            }
+        }
+
+        // Saves all files directly to path
+        public void Yeet(string path)
+        {
+            Directory.CreateDirectory(path);
+            Rewind();
+            foreach (var entry in this)
+            {
+                using var file = new FileStream(Path.Join(path, entry.Key), FileMode.Create);
+                entry.Value.CopyTo(file);
+            }
         }
     }
 }

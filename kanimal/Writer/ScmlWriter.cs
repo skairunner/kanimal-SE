@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Text;
 using System.Xml;
 using NLog;
@@ -23,7 +26,7 @@ namespace kanimal
             Sprites = reader.Sprites;
         }
 
-        public override void Save(string path)
+        public override OutputFiles Save()
         {
             // Do all the calculation required to write to an scml, including building
             // an in-memory XML tree
@@ -33,12 +36,29 @@ namespace kanimal
             AddAnimInfo();
 
             // Finally, output to a file
-            var writer = new XmlTextWriter(path, Encoding.Unicode);
+            var files = new OutputFiles();
+            var scmlStream = files[$"{BuildData.Name}.scml"] = new MemoryStream();
+            var writer = new XmlTextWriter(scmlStream, Encoding.Unicode);
             writer.Formatting = Formatting.Indented;
             Scml.WriteTo(writer);
             writer.Flush();
+            
+            // Add sprites to output files
+            foreach (var sprite in Sprites)
+            {
+                var stream = new MemoryStream();
+                sprite.Bitmap.Save(stream, ImageFormat.Png);
+                files[sprite.Name + ".png"] = stream;
+            }
+            
+            return files;
         }
 
+        public override void SaveToDir(string path)
+        {
+            Save().Yeet(path);
+        }
+        
         protected virtual void PrepareFile()
         {
             Scml = new XmlDocument();

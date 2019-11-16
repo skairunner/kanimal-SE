@@ -22,20 +22,22 @@ namespace kanimal
             spritesheet = reader.GetSpriteSheet();
         }
 
-        public override void Save(string path)
+        public override OutputFiles Save()
         {
-            Directory.CreateDirectory(path);
-            using (var fs = new FileStream(Path.Join(path, $"{BuildData.Name}_build.bytes"), FileMode.Create))
-            {
-                WriteBuild(fs);
-            }
+            var files = new OutputFiles();
+            var build = files[$"{BuildData.Name}_build.bytes"] = new MemoryStream();
+            WriteBuild(build);
+            var anim = files[$"{BuildData.Name}_anim.bytes"] = new MemoryStream();
+            WriteAnim(anim);
+            var png = files[$"{BuildData.Name}.png"] = new MemoryStream();
+            spritesheet.Save(png, ImageFormat.Png);
 
-            using (var fs = new FileStream(Path.Join(path, $"{BuildData.Name}_anim.bytes"), FileMode.Create))
-            {
-                WriteAnim(fs);
-            }
+            return files;
+        }
 
-            spritesheet.Save(Path.Join(path, $"{BuildData.Name}.png"), ImageFormat.Png);
+        public override void SaveToDir(string path)
+        {
+            Save().Yeet(path);
         }
 
         public void WriteBuild(Stream output)
