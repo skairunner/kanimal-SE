@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Drawing;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using NLog;
 
@@ -20,7 +21,14 @@ namespace kanimal
         {
             _build = build;
             this.anim = anim;
-            image = new Bitmap(img);
+            try
+            {
+                image = new Bitmap(img);
+            } catch (ArgumentException e)
+            {
+                Logger.Fatal("The given \"img\" stream is not a valid image file. Original exception is as follows:");
+                ExceptionDispatchInfo.Capture(e).Throw();
+            }
         }
 
         // Reads the entire build.bytes file
