@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Xml;
 using kanimal.KAnim;
 using kanimal.KBuild;
@@ -38,7 +39,15 @@ namespace kanimal
         public ScmlReader(string scmlpath)
         {
             scml = new XmlDocument();
-            scml.Load(scmlpath);
+            try
+            {
+                scml.Load(scmlpath);
+            }
+            catch (ArgumentNullException e)
+            {
+                Logger.Fatal($"You must specify a path to load the SCML from. Original exception is as follows:");
+                ExceptionDispatchInfo.Capture(e).Throw();
+            }
             // Due to scml conventions, our input directory is the same as the scml file's
             var inputDir = Path.Join(scmlpath, "../");
             inputSprites = new Dictionary<string, Bitmap>();
