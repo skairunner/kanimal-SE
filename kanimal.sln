@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kanimal", "kanimal\kanimal.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kanimal-cli", "kanimal-cli\kanimal-cli.csproj", "{387A2060-D187-491D-A600-867A59FC9E23}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kanimal-tests", "kanimal-tests\kanimal-tests.csproj", "{EC46A6C4-DAC7-44CB-A2CF-8A602DEB25D4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{387A2060-D187-491D-A600-867A59FC9E23}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{387A2060-D187-491D-A600-867A59FC9E23}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{387A2060-D187-491D-A600-867A59FC9E23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC46A6C4-DAC7-44CB-A2CF-8A602DEB25D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC46A6C4-DAC7-44CB-A2CF-8A602DEB25D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC46A6C4-DAC7-44CB-A2CF-8A602DEB25D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC46A6C4-DAC7-44CB-A2CF-8A602DEB25D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
