@@ -62,9 +62,9 @@ namespace kanimal
                 writer.Write(symbol.Path);
                 writer.Write(symbol.Color);
                 writer.Write(symbol.Flags);
-                writer.Write(symbol.FrameCount);
+                writer.Write(symbol.Frames.Count);
 
-                for (var j = 0; j < symbol.FrameCount; j++)
+                for (var j = 0; j < symbol.Frames.Count; j++)
                 {
                     var frame = symbol.Frames[j];
                     writer.Write(frame.SourceFrameNum);

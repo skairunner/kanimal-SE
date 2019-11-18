@@ -59,8 +59,10 @@ namespace kanimal_cli
             {
                 case "scml":
                     var scml = files.Find(path => path.EndsWith(".scml"));
-                    reader = new ScmlReader(scml);
-                    reader.Read();
+                    var scmlreader = new ScmlReader(scml);
+                    scmlreader.AllowMissingSprites = !opt.Strict;
+                    scmlreader.Read();
+                    reader = scmlreader;
                     break;
                 case "kanim":
                     var png = files.Find(path => path.EndsWith(".png"));

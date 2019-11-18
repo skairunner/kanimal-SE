@@ -29,6 +29,8 @@ namespace kanimal
         private TexturePacker textures;
         private Dictionary<string, Bitmap> inputSprites;
 
+        public bool AllowMissingSprites = true;
+
         public ScmlReader(Stream scmlStream, Dictionary<string, Bitmap> sprites)
         {
             scml = new XmlDocument();
@@ -159,7 +161,12 @@ namespace kanimal
                 frame.PivotHeight = sprite.Height * 2;
 
                 // Find the appropriate pivot from the scml
-                var scmlnode = projectSprites[$"{sprite.BaseName}_{frame.SourceFrameNum}"];
+                var key = $"{sprite.BaseName}_{frame.SourceFrameNum}";
+                if (!projectSprites.ContainsKey(key))
+                {
+                    continue;
+                }
+                var scmlnode = projectSprites[key];
                 frame.PivotX = -(float.Parse(scmlnode.Attributes["pivot_x"].Value) - 0.5f) * frame.PivotWidth;
                 frame.PivotY = (float.Parse(scmlnode.Attributes["pivot_y"].Value) - 0.5f) * frame.PivotHeight;
                 BuildData.Symbols[symbolIndex].Frames.Add(frame);
@@ -357,8 +364,39 @@ namespace kanimal
                         var frame_object_node = frame_node.GetElementsByTagName("object")[0];
 
                         // Figure out the file id from the timeline's keyframe
-                        var image_node = projectFileIdMap[frame_object_node.Attributes["file"].Value];
-                        var imageName = image_node.Attributes["name"].Value;
+                        string imageName;
+                        float pivotX, pivotY;
+                        int width, height;
+                        XmlElement image_node;
+                        try
+                        {
+                            image_node = projectFileIdMap[frame_object_node.Attributes["file"].Value];
+                            imageName = image_node.Attributes["name"].Value;
+                            pivotX = float.Parse(image_node.Attributes["pivot_x"].Value);
+                            pivotY = float.Parse(image_node.Attributes["pivot_y"].Value);
+                            width = int.Parse(image_node.Attributes["width"].Value);
+                            height = int.Parse(image_node.Attributes["height"].Value);
+                        } catch (NullReferenceException)
+                        {
+                            var animname = timeline_node.Attributes["name"].Value;
+                            if (AllowMissingSprites)
+                            {
+                                // if sprite is missing, we can still reference it in the anim, it just wont exist.
+                                imageName = timeline_node.Attributes["name"].Value;
+                                pivotX = 0;
+                                pivotY = 0;
+                                width = 1;
+                                height = 1;
+                                Logger.Warn(
+                                    $"Anim \"{animname}\" in \"{bank.Name}\" does not reference any valid sprite.\n" + 
+                                    "If this was not intended behaviour, use the -S/--strict flag to enforce checking this error.");
+                            }
+                            else
+                            {
+                                throw new ProjectParseException(
+                                    $"Frame element \"{animname}\" in \"{bank.Name}\" does not reference any valid sprite.\n");
+                            }
+                        }
 
                         element.Image = Utilities.KleiHash(Utilities.GetSpriteBaseName(imageName));
                         element.Index = Utilities.GetFrameCount(imageName);
@@ -433,10 +471,6 @@ namespace kanimal
                         // additionally it is necessary b/c rotation is done aroudn the pivot
                         // (mathematically compute this as rotation around the origin just composed with
                         // translating the pivot to and from the origin)
-                        var pivotX = float.Parse(image_node.Attributes["pivot_x"].Value);
-                        var pivotY = float.Parse(image_node.Attributes["pivot_y"].Value);
-                        var width = int.Parse(image_node.Attributes["width"].Value);
-                        var height = int.Parse(image_node.Attributes["height"].Value);
                         pivotX *= width;
                         pivotY *= height;
                         var centerX = pivotX + xOffset;
