@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Xml;
@@ -105,8 +106,8 @@ namespace kanimal
                     fileNode.SetAttribute("name", $"{row.Name}_{row.Index}");
                     fileNode.SetAttribute("width", ((int) row.Width).ToString());
                     fileNode.SetAttribute("height", ((int) row.Height).ToString());
-                    fileNode.SetAttribute("pivot_x", pivotX.ToString("G9"));
-                    fileNode.SetAttribute("pivot_y", pivotY.ToString("G9"));
+                    fileNode.SetAttribute("pivot_x", pivotX.ToStringInvariant());
+                    fileNode.SetAttribute("pivot_y", pivotY.ToStringInvariant());
 
                     folderNode.AppendChild(fileNode);
                 }
@@ -131,7 +132,7 @@ namespace kanimal
                 var animNode = Scml.CreateElement("animation");
                 animNode.SetAttribute("id", animIndex.ToString());
                 animNode.SetAttribute("name", bank.Name);
-                animNode.SetAttribute("length", (rate * bank.FrameCount).ToString());
+                animNode.SetAttribute("length", (rate * bank.FrameCount).ToStringInvariant());
                 animNode.SetAttribute("interval", rate.ToString());
 
                 Entity.AppendChild(animNode);
@@ -234,10 +235,10 @@ namespace kanimal
                             var fileNode = Scml.CreateElement("file");
                             fileNode.SetAttribute("id", FilenameIndex[filename]);
                             fileNode.SetAttribute("name", filename);
-                            fileNode.SetAttribute("width", 1.ToString());
-                            fileNode.SetAttribute("height", 1.ToString());
-                            fileNode.SetAttribute("pivot_x", 0f.ToString("G9"));
-                            fileNode.SetAttribute("pivot_y", 0f.ToString("G9"));
+                            fileNode.SetAttribute("width", 1f.ToStringInvariant());
+                            fileNode.SetAttribute("height", 1f.ToStringInvariant());
+                            fileNode.SetAttribute("pivot_x", 0f.ToStringInvariant());
+                            fileNode.SetAttribute("pivot_y", 0f.ToStringInvariant());
                             var folderNode = SpriterRoot.GetElementsByTagName("folder")[0];
                             folderNode.AppendChild(fileNode);
                         }
@@ -248,11 +249,11 @@ namespace kanimal
                     }
 
                     object_def.SetAttribute("file", FilenameIndex[filename]);
-                    object_def.SetAttribute("x", (trans.X * 0.5f).ToString("G5"));
-                    object_def.SetAttribute("y", (-trans.Y * 0.5f).ToString("G5"));
-                    object_def.SetAttribute("angle", trans.Angle.ToString("G5"));
-                    object_def.SetAttribute("scale_x", trans.ScaleX.ToString("G5"));
-                    object_def.SetAttribute("scale_y", trans.ScaleY.ToString("G5"));
+                    object_def.SetAttribute("x", (trans.X * 0.5f).ToStringInvariant());
+                    object_def.SetAttribute("y", (-trans.Y * 0.5f).ToStringInvariant());
+                    object_def.SetAttribute("angle", trans.Angle.ToStringInvariant());
+                    object_def.SetAttribute("scale_x", trans.ScaleX.ToStringInvariant());
+                    object_def.SetAttribute("scale_y", trans.ScaleY.ToStringInvariant());
 
                     keyframe.AppendChild(object_def);
                     timelineMap[idMap[name]].AppendChild(keyframe);
