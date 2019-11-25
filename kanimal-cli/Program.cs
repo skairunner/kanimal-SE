@@ -135,7 +135,7 @@ namespace kanimal_cli
                 .WithParsed<ScmlToKanimOptions>(o => Convert(
                     "scml",
                     "kanim",
-                    new List<string> {o.ScmlFile},
+                    o.ScmlFile == null ? new List<string>() : new List<string> {o.ScmlFile},
                     o))
                 .WithParsed<GenericOptions>(o => Convert(o.InputFormat, o.OutputFormat, o.Files.ToList(), o))
                 .WithParsed<BatchConvertOptions>(o =>
