@@ -68,6 +68,30 @@ namespace kanimal_cli
                     var build = files.Find(path => path.EndsWith("build.bytes"));
                     var anim = files.Find(path => path.EndsWith("anim.bytes"));
 
+                    var fileNames = new[] {png, build, anim};
+
+                    var nullCount = fileNames.Count(o => o == null);
+                    if (nullCount > 0)
+                    {
+                        Logger.Fatal($"The following file{(nullCount > 1 ? "s were" : "was")} not specified:");
+                        for (var i = 0; i < 3; ++i)
+                            if (fileNames[i] == null)
+                                switch (i)
+                                {
+                                    case 0:
+                                        Logger.Fatal("    png");
+                                        break;
+                                    case 1:
+                                        Logger.Fatal("    build");
+                                        break;
+                                    case 2:
+                                        Logger.Fatal("    anim");
+                                        break;
+                                }
+
+                        Environment.Exit((int) ExitCodes.IncorrectArguments);
+                    }
+
                     reader = new KanimReader(
                         new FileStream(build, FileMode.Open),
                         new FileStream(anim, FileMode.Open),
@@ -108,7 +132,8 @@ namespace kanimal_cli
         private static void Main(string[] args)
         {
             Parser.Default
-                .ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, GenericOptions, DumpOptions, BatchConvertOptions>(args)
+                .ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, GenericOptions, DumpOptions, BatchConvertOptions
+                >(args)
                 .WithParsed<KanimToScmlOptions>(o => Convert(
                     "kanim",
                     "scml",
