@@ -23,15 +23,15 @@ Generally, there are two ways to invoke all of KSE's conversion features: the sh
 3. The parameters for invoking KSE are: 
 ```
 # on windows
-$ kanimal-cli.exe kanim [NAME].png [NAME]_anim.bytes [NAME]_build.bytes
+$ kanimal-cli.exe scml [NAME].png [NAME]_anim.bytes [NAME]_build.bytes
 # on mac/linux
-$ ./kanimal-cli kanim [NAME].png [NAME]_anim.bytes [NAME]_build.bytes
+$ ./kanimal-cli scml [NAME].png [NAME]_anim.bytes [NAME]_build.bytes
 ```
 The files can be provided in any order. On many consoles, it is possible to specify a file by dragging it into the terminal, or copy and pasting the path directly. If no issues are encountered, this command should output the scml file and all unpacked sprites into the `output/` directory, relative to where you run the program.
 
 To specify a directory, you can use the `-o/--output` switch:
 ```
-$ kanimal-cli.exe kanim [NAME].png [NAME]_anim.bytes [NAME]_build.bytes -o my/output/path
+$ kanimal-cli.exe scml [NAME].png [NAME]_anim.bytes [NAME]_build.bytes -o my/output/path
 ```
 
 #### Batch conversion
@@ -53,9 +53,9 @@ The process is very similar to the previous one.
 3. The parameters for invoking KSE are:
 ```
 # on windows
-$ kanimal-cli.exe scml [NAME].scml
+$ kanimal-cli.exe kanim [NAME].scml
 # on mac/linux
-$ ./kanimal-cli scml [NAME].scml
+$ ./kanimal-cli kanim [NAME].scml
 ```
 
 Just like in the kanim → scml case, the files are output by default into the `output/` directory, and a specific path can be specified with the `-o/--output` switch.
