@@ -1,5 +1,18 @@
 ﻿# kanimal SE (KSE)
 
+- [kanimal SE (KSE)](#kanimal-se--kse-)
+  * [Features](#features)
+  * [Installing](#installing)
+    + [Which file to download](#which-file-to-download)
+  * [Usage](#usage)
+    + [kanim → scml](#kanim---scml)
+      - [Batch conversion](#batch-conversion)
+    + [scml → kanim](#scml---kanim)
+    + [Arbitrary directions](#arbitrary-directions)
+    + [Kanim dump](#kanim-dump)
+  * [Things to know](#things-to-know)
+    + [Spriter](#spriter)
+
 A library and command-line interface (CLI) converter between cut-out animation formats, including kanim (Klei animation) and scml (Spriter) with a common, intermediate in-memory format. KSE was developed to support *Oxygen Not Included* modding, and therefore features will focus on those that are useful for ONI.
 
 KSE is, at its base, a port of kparserX from Java to C#, and wouldn't have been possible without @daviscook477's work on kparser.
@@ -9,6 +22,14 @@ KSE is, at its base, a port of kparserX from Java to C#, and wouldn't have been 
 * Multi-directional conversion between compatible formats: kanim → scml, scml → kanim, kanim → kanim, scml → scml are all possible.
 * Cross-platform executable
 * Actively maintained
+
+## Installing
+
+KSE is a dotNET application. This means that you don't need to install the program. Just download the appropriate version [from here](https://github.com/skairunner/kanimal-SE/releases). Below is a quick guide to which version is right for you.
+
+### Which file to download
+
+There are three supported operating systems (Windows, MacOS and Linux) and two types of packaging (dotNET dependent and self-contained), meaning six downloads possible. **If you already have dotNET v3 or higher installed** on your computer, use the NET Dependent download to have a much smaller file size (631 kb vs 29MB). If you don't have dotNET installed, or don't want to risk the program not working, I recommend downloading the self-contained version instead.  
 
 ## Usage
 
