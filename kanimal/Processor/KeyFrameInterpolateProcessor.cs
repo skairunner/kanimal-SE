@@ -91,6 +91,13 @@ namespace kanimal
         }
     }
 
+    /* interpolates all missing frames where the expected frames are all the frames that
+     * are a multiple of the snapping interval
+     * 
+     * ex is that if we have an animation of length 330 with snapping interval of 33
+     * then we expect frames to be at 0, 33, 66, ..., 297, 330 so the interpolation
+     * processing will make the frames for each of time steps for every sprite when it is
+     * supposed to be present at that time step */
     public class KeyFrameInterpolateProcessor : Processor
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
