@@ -104,6 +104,7 @@ namespace kanimal
 
         public override XmlDocument Process(XmlDocument original)
         {
+            Logger.Info("Interpolating key frames.");
             /* clone to avoid modifying original data */
             XmlDocument processedScml = (XmlDocument)original.Clone();
 
@@ -419,8 +420,13 @@ namespace kanimal
                                 jPrime = 0;
                             }
                         }
+                        /* if we found a before frame but couldn't find an after frame this means that there was a frame that is completely defined
+                         * but there are more frames that need to be interpolated from this frame only
+                         * since this is the only frame, spriter interprets this frame as being the frame used for all of the interpolated positions
+                         * in which this sprite exists */
                         if (afterFrame == null)
                         {
+                            Logger.Debug("Could not find after frame to interpolate between. Interpreting this to mean that this frame is expected to take the entire duration of the timeline.");
                             afterFrame = beforeFrame;
                             afterFrameIndex = beforeFrameIndex;
                         }
@@ -486,8 +492,13 @@ namespace kanimal
                                 jPrime = 0;
                             }
                         }
+                        /* if we found a before frame but couldn't find an after frame this means that there was a frame that is completely defined
+                         * but there are more frames that need to be interpolated from this frame only
+                         * since this is the only frame, spriter interprets this frame as being the frame used for all of the interpolated positions
+                         * in which this sprite exists */
                         if (afterFrame == null)
                         {
+                            Logger.Debug("Could not find after frame to interpolate between. Interpreting this to mean that this frame is expected to take the entire duration of the timeline.");
                             afterFrame = beforeFrame;
                             afterFrameIndex = beforeFrameIndex;
                         }
@@ -530,7 +541,11 @@ namespace kanimal
 
         /* requires that both input angles x0 x1 are within 0 to 360 and returns an interpolated
          * angle also between 0 and 360
-         * interpolates the shortest route rather than explicitly clockwise or counterclockwise */
+         * interpolates the shortest route rather than explicitly clockwise or counterclockwise 
+         *
+         * this is important because spriter does shortest route interpolation so we need to
+         * do the same lest our rotations come out wrong
+         * reason for using degrees is that spriter saves to SCML in degrees not radians */
         private float LinearInterpolateAngle(float x0, float x1, float t0, float t1, float t)
         {
             if (t0 == t1)
