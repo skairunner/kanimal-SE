@@ -283,8 +283,15 @@ namespace kanimal
             var entity = scml.GetElementsByTagName("entity")[0];
             var animations = entity.ChildNodes.GetElements();
             var animCount = 0;
+
+            /* error checking if user has intervals that aren't consistent because ONI only processes animations
+             * as if each frame is the same interval (in ms) from the last */
             var hasInconsistentIntervals = false;
             var inconsistentAnims = new HashSet<string>();
+
+            /* error checking if user has accidentally used pivots in timeline rather than setting pivot on original sprite */
+            var hasPivotsSpecifiedInTimeline = false;
+            var pivotAnims = new HashSet<string>();
 
             foreach (var anim in animations)
             {
@@ -496,6 +503,11 @@ namespace kanimal
                         var xOffset = Interpolate("x", 0f);
                         var yOffset = Interpolate("y", 0f);
 
+                        if (frame_object_node.Attributes["pivot_x"] != null || frame_object_node.Attributes["pivot_y"] != null)
+                        {
+                            hasPivotsSpecifiedInTimeline = true;
+                            pivotAnims.Add(bank.Name);
+                        }
 
                         var animdata = new AnimationData
                         {
@@ -577,6 +589,13 @@ namespace kanimal
                 var anims = inconsistentAnims.ToList().Join();
                 throw new ProjectParseException(
                     $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.");
+            }
+
+            if (hasPivotsSpecifiedInTimeline)
+            {
+                var anims = pivotAnims.ToList().Join();
+                throw new ProjectParseException(
+                    $"SCML format exception: There were pivot points specified in timelines rather than only on the sprites in anims {anims}. Aborting read.");
             }
 
             AnimData.AnimCount = animCount;
