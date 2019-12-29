@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using System.Xml;
+using NLog;
 
 namespace kanimal
 {
@@ -91,6 +93,8 @@ namespace kanimal
 
     public class KeyFrameInterpolateProcessor : Processor
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
         public override XmlDocument Process(XmlDocument original)
         {
             /* clone to avoid modifying original data */
@@ -111,7 +115,9 @@ namespace kanimal
                 }
             }
 
-            /* now take the in memory representation and convert it back to the scml document */
+            /* now take the in memory representation and convert it back to the scml document 
+             * everything but the animation nodes should stay in-tact so it simplfy removes
+             * all animation nodes and rewrites them from the in-memory animation information */
             List<XmlNode> nodes = new List<XmlNode>();
             foreach (XmlNode node in entity.ChildNodes)
             {
@@ -159,6 +165,9 @@ namespace kanimal
                 frameArray.Add(frames);
             }
 
+            var hasBrokenSnapping = false;
+            var brokenAnims = new HashSet<string>();
+
             /* read all the data from mainline 
              * oddly it is not needed to read which timeline key frame is associated
              * with each mainline key frame since the timline key frames contain timing
@@ -174,6 +183,13 @@ namespace kanimal
                     if (keyElement.HasAttribute("time"))
                     {
                         time = int.Parse(keyElement.GetAttribute("time"));
+                    }
+                    if (time % interval != 0)
+                    {
+                        Logger.Warn(
+                            $"While parsing animation \"{name}\", found broken snapping in the mainline: it is time {time} ms that is not a multiple of snapping interval {interval} ms.");
+                        hasBrokenSnapping = true;
+                        brokenAnims.Add(name);
                     }
                     /* scale the time by the interval between frames to figure out which
                      * frame index in the array this goes to */
@@ -224,6 +240,13 @@ namespace kanimal
                             {
                                 time = int.Parse(keyElement.GetAttribute("time"));
                             }
+                            if (time % interval != 0)
+                            {
+                                Logger.Warn(
+                                    $"While parsing animation \"{name}\", found broken snapping at timeline {timeline}: it is time {time} ms that is not a multiple of snapping interval {interval} ms.");
+                                hasBrokenSnapping = true;
+                                brokenAnims.Add(name);
+                            }
                             int frameIndex = time / interval;
                             XmlElement child = GetFirstChildByName(keyElement, "object");
                             if (child == null)
@@ -270,6 +293,13 @@ namespace kanimal
                         }
                     }
                 }
+            }
+
+            if (hasBrokenSnapping)
+            {
+                var anims = brokenAnims.ToList().Join();
+                throw new ProjectParseException(
+                    $"SCML format exception: The timelines in anims {anims} had frames at times not snapped to the running interval {interval} ms. Aborting read.");
             }
 
             /* determine which frames need to be interpolated by checking which frames are key frames in the mainline */

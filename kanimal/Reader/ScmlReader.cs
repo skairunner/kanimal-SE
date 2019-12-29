@@ -30,12 +30,24 @@ namespace kanimal
         private Dictionary<string, Bitmap> inputSprites;
 
         public bool AllowMissingSprites = true;
+        public bool InterpolateMissingFrames = true;
 
         public ScmlReader(Stream scmlStream, Dictionary<string, Bitmap> sprites)
         {
             scml = new XmlDocument();
             scml.Load(scmlStream);
-            scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
+            if (InterpolateMissingFrames)
+            {
+                try
+                {
+                    scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
+                }
+                catch (Exception e)
+                {
+                    Logger.Fatal($"Failed to interpolate in-between frames. Original exception is as follows:");
+                    ExceptionDispatchInfo.Capture(e).Throw();
+                }
+            }
             inputSprites = sprites;
         }
         
@@ -51,7 +63,18 @@ namespace kanimal
                 Logger.Fatal($"You must specify a path to load the SCML from. Original exception is as follows:");
                 ExceptionDispatchInfo.Capture(e).Throw();
             }
-            scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
+            if (InterpolateMissingFrames)
+            {
+                try
+                {
+                    scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
+                }
+                catch (Exception e)
+                {
+                    Logger.Fatal($"Failed to interpolate in-between frames. Original exception is as follows:");
+                    ExceptionDispatchInfo.Capture(e).Throw();
+                }
+            }
             // Due to scml conventions, our input directory is the same as the scml file's
             var inputDir = Path.Join(scmlpath, "../");
             inputSprites = new Dictionary<string, Bitmap>();
