@@ -159,7 +159,7 @@ namespace kanimal
             /* build the frame array - description is in Alternate.Animation */
             List<List<ProcessingFrame>> frameArray = new List<List<ProcessingFrame>>();
             /* count of frames to know how large the frame array should be */
-            int numberOfFrames = length / interval;
+            int numberOfFrames = length / interval + 1;
             /* for each sprite and bone id a list of frames is created */
             for (int i = 0; i < infoProvider.Size(); i++)
             {
