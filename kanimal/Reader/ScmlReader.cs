@@ -35,6 +35,7 @@ namespace kanimal
         {
             scml = new XmlDocument();
             scml.Load(scmlStream);
+            scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
             inputSprites = sprites;
         }
         
@@ -50,6 +51,7 @@ namespace kanimal
                 Logger.Fatal($"You must specify a path to load the SCML from. Original exception is as follows:");
                 ExceptionDispatchInfo.Capture(e).Throw();
             }
+            scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
             // Due to scml conventions, our input directory is the same as the scml file's
             var inputDir = Path.Join(scmlpath, "../");
             inputSprites = new Dictionary<string, Bitmap>();
