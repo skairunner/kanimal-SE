@@ -52,7 +52,12 @@ namespace kanimal
             {
                 var stream = new MemoryStream();
                 sprite.Bitmap.Save(stream, ImageFormat.Png);
-                files[sprite.Name + ".png"] = stream;
+                var outputName = sprite.Name;
+                if (!outputName.Contains(".png"))
+                {
+                    outputName += ".png";
+                }
+                files[outputName] = stream;
             }
             
             return files;
