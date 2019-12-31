@@ -116,7 +116,7 @@ namespace kanimal
                     writer.Write(frame.ElementCount);
                     foreach (var element in frame.Elements)
                     {
-                        writer.Write(element.Image);
+                        writer.Write(element.ImageHash);
                         writer.Write(element.Index);
                         writer.Write(element.Layer);
                         writer.Write(element.Flags);

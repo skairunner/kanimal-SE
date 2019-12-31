@@ -13,7 +13,10 @@ namespace kanimal
     public class ScmlWriter : Writer
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
+        // Maps filenames as strings to integers, because Spriter assigns an index
+        // to each unique sprite, presumably to deduplicate its XML.
+        private Dictionary<SpriteName, int> filenameindex;
+        
         protected XmlDocument Scml;
         protected XmlElement SpriterRoot;
         protected XmlElement Entity;
@@ -52,11 +55,7 @@ namespace kanimal
             {
                 var stream = new MemoryStream();
                 sprite.Bitmap.Save(stream, ImageFormat.Png);
-                var outputName = sprite.Name;
-                if (!outputName.Contains(".png"))
-                {
-                    outputName += ".png";
-                }
+                var outputName = $"{sprite.Name}.png";
                 files[outputName] = stream;
             }
             
@@ -89,14 +88,14 @@ namespace kanimal
                 folderNode.SetAttribute("id", i.ToString());
                 SpriterRoot.AppendChild(folderNode);
 
-                FilenameIndex = new Dictionary<string, string>();
+                filenameindex = new Dictionary<SpriteName, int>();
                 for (var fileIndex = 0; fileIndex < BuildData.FrameCount; fileIndex++)
                 {
                     var row = BuildTable[fileIndex];
                     var key = $"{row.Name}_{row.Index}";
-                    if (FilenameIndex.ContainsKey(key)) key += "_" + fileIndex;
+                    if (filenameindex.ContainsKey(key)) key += "_" + fileIndex;
 
-                    FilenameIndex[key] = fileIndex.ToString();
+                    filenameindex[key] = fileIndex.ToString();
 
                     var x = row.PivotX - row.PivotWidth / 2f;
                     var y = row.PivotY - row.PivotHeight / 2f;
@@ -224,7 +223,7 @@ namespace kanimal
                     object_def.SetAttribute("folder", "0");
                     var filename = element.FindFilename(AnimHashes);
 
-                    if (!FilenameIndex.ContainsKey(filename))
+                    if (!filenameindex.ContainsKey(filename))
                     {
                         if (FillMissingSprites)
                         {
@@ -236,9 +235,9 @@ namespace kanimal
                             };
                             Sprites.Add(sprite);
                             // Also add it to the Spriter file
-                            FilenameIndex[filename] = (BuildData.FrameCount + 1).ToString();
+                            filenameindex[filename] = (BuildData.FrameCount + 1).ToString();
                             var fileNode = Scml.CreateElement("file");
-                            fileNode.SetAttribute("id", FilenameIndex[filename]);
+                            fileNode.SetAttribute("id", filenameindex[filename]);
                             fileNode.SetAttribute("name", filename);
                             fileNode.SetAttribute("width", 1f.ToStringInvariant());
                             fileNode.SetAttribute("height", 1f.ToStringInvariant());
@@ -253,7 +252,7 @@ namespace kanimal
                         }
                     }
 
-                    object_def.SetAttribute("file", FilenameIndex[filename]);
+                    object_def.SetAttribute("file", filenameindex[filename]);
                     object_def.SetAttribute("x", (trans.X * 0.5f).ToStringInvariant());
                     object_def.SetAttribute("y", (-trans.Y * 0.5f).ToStringInvariant());
                     object_def.SetAttribute("angle", trans.Angle.ToStringInvariant());

@@ -46,10 +46,15 @@ namespace kanimal
         public struct Row : IToDebugString
         {
             public Build Build;
-            public string Name;
+            public SpriteBaseName Name;
             public int Index, Hash, Time, Duration;
             public float X1, Y1, X2, Y2, Width, Height, PivotX, PivotY, PivotWidth, PivotHeight;
 
+            public SpriteName GetSpriteName()
+            {
+                return new SpriteName($"{Name}_{Index}");
+            }
+            
             public string ToDebugString()
             {
                 return $"for symbol {Name}, frame index {Index} has duration {Duration}"

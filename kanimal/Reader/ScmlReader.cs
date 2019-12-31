@@ -24,15 +24,15 @@ namespace kanimal
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         private XmlDocument scml;
-        private Dictionary<string, XmlElement> projectSprites; // quick lookup for the sprites incl in project
+        private Dictionary<SpriteName, XmlElement> projectSprites; // quick lookup for the sprites incl in project
         private Dictionary<string, XmlElement> projectFileIdMap; // quick lookup for the anims incl in project
         private TexturePacker textures;
-        private Dictionary<string, Bitmap> inputSprites;
+        private Dictionary<Filename, Bitmap> inputSprites; // The keys in this dictionary are filenames, *with* the file extension, if it exists.
 
         public bool AllowMissingSprites = true;
         public bool InterpolateMissingFrames = true;
 
-        public ScmlReader(Stream scmlStream, Dictionary<string, Bitmap> sprites)
+        public ScmlReader(Stream scmlStream, Dictionary<Filename, Bitmap> sprites)
         {
             scml = new XmlDocument();
             scml.Load(scmlStream);
@@ -48,6 +48,7 @@ namespace kanimal
                     ExceptionDispatchInfo.Capture(e).Throw();
                 }
             }
+            
             inputSprites = sprites;
         }
         
@@ -77,23 +78,22 @@ namespace kanimal
             }
             // Due to scml conventions, our input directory is the same as the scml file's
             var inputDir = Path.Join(scmlpath, "../");
-            inputSprites = new Dictionary<string, Bitmap>();
-            foreach (var filename in Directory.GetFiles(inputDir, "*.png", SearchOption.TopDirectoryOnly))
+            inputSprites = new Dictionary<Filename, Bitmap>();
+            foreach (var filepath in Directory.GetFiles(inputDir, "*.png", SearchOption.TopDirectoryOnly))
             {
-                inputSprites[Path.GetFileName(filename)] = new Bitmap(filename);
+                inputSprites[Filename.FromPath(filepath)] = new Bitmap(filepath);
             }
         }
 
         private void ReadProjectSprites()
         {
-            projectSprites = new Dictionary<string, XmlElement>();
+            projectSprites = new Dictionary<SpriteName, XmlElement>();
             projectFileIdMap = new Dictionary<string, XmlElement>();
 
             var children = scml.GetElementsByTagName("folder")[0].ChildNodes.GetElements();
             foreach (var element in children)
             {
-                var withoutExt = Utilities.WithoutExtension(element.Attributes["name"].Value);
-                projectSprites[withoutExt] = element;
+                projectSprites[SpriteName.FromFilename(element.Attributes["name"].Value)] = element;
                 projectFileIdMap[element.Attributes["id"].Value] = element;
             }
         }
@@ -105,16 +105,16 @@ namespace kanimal
 
             // Also set the output list of sprites
             Sprites = new List<Sprite>();
-            Sprites = inputSprites.Select(sprite => new Sprite {Bitmap = sprite.Value, Name = sprite.Key}).ToList();
+            Sprites = inputSprites.Select(sprite => new Sprite {Bitmap = sprite.Value, Name = sprite.Key.ToSpriteName()}).ToList();
 
             Logger.Info("Reading build info.");
             textures = new TexturePacker(inputSprites.Select(
-                    s => new Tuple<string, Bitmap>(s.Key, s.Value))
+                    s => new Tuple<SpriteName, Bitmap>(s.Key.ToSpriteName(), s.Value))
                 .ToList());
             // Sort packed sprites by name to facilitate build packing later on, bc it has flaky logic
             // and will otherwise fail
             textures.SpriteAtlas.Sort(
-                (sprite1, sprite2) => string.Compare(sprite1.Name, sprite2.Name, StringComparison.Ordinal));
+                (sprite1, sprite2) => string.Compare(sprite1.SpriteName.Value, sprite2.SpriteName.Value, StringComparison.Ordinal));
 
             // Once texture is packed. reads the atlas to determine build info
             PackBuild(textures);
@@ -135,11 +135,11 @@ namespace kanimal
             SetSymbolsAndFrames(texture.SpriteAtlas);
             BuildData.Name = scml.GetElementsByTagName("entity")[0].Attributes["name"].Value;
             var histogram = texture.GetHistogram();
-            var hashTable = new Dictionary<string, int>();
+            var hashTable = new Dictionary<SpriteBaseName, int>();
 
             BuildData.Symbols = new List<Symbol>();
             var symbolIndex = -1;
-            string lastName = null;
+            SpriteBaseName lastName = null;
 
             foreach (var sprite in texture.SpriteAtlas)
             {
@@ -151,7 +151,7 @@ namespace kanimal
                     // It may be unnecessary but the original had it, and I don't know if the performance impact is
                     // small enough to remove it.
                     if (!hashTable.ContainsKey(sprite.BaseName))
-                        hashTable[sprite.BaseName] = Utilities.KleiHash(sprite.BaseName);
+                        hashTable[sprite.BaseName] = sprite.BaseName.KleiHashed;
 
                     symbol.Hash = hashTable[sprite.BaseName];
                     symbol.Path = symbol.Hash;
@@ -169,7 +169,7 @@ namespace kanimal
                 }
 
                 var frame = new Frame();
-                frame.SourceFrameNum = Utilities.GetFrameCount(sprite.Name);
+                frame.SourceFrameNum = sprite.SpriteName.Index;
                 // duration is always 1 because the frames for a symbol always are numbered incrementing by 1
                 // (or at least that's why I think it's always 1 in the examples I looked at)
                 frame.Duration = 1;
@@ -187,18 +187,18 @@ namespace kanimal
 
                 // Find the appropriate pivot from the scml
                 var key = $"{sprite.BaseName}_{frame.SourceFrameNum}";
-                if (!projectSprites.ContainsKey(key))
+                if (!projectSprites.ContainsKey(sprite.SpriteName))
                 {
                     continue;
                 }
-                var scmlnode = projectSprites[key];
+                var scmlnode = projectSprites[sprite.SpriteName];
                 frame.PivotX = -(float.Parse(scmlnode.Attributes["pivot_x"].Value) - 0.5f) * frame.PivotWidth;
                 frame.PivotY = (float.Parse(scmlnode.Attributes["pivot_y"].Value) - 0.5f) * frame.PivotHeight;
                 BuildData.Symbols[symbolIndex].Frames.Add(frame);
             }
 
             // Finally, flip the key/values to get the build hash table
-            BuildHashes = new Dictionary<int, string>();
+            BuildHashes = new Dictionary<int, SpriteBaseName>();
             foreach (var entry in hashTable) BuildHashes[entry.Value] = entry.Key;
 
             BuildBuildTable(texture.SpriteSheet.Width, texture.SpriteSheet.Height);
@@ -423,15 +423,15 @@ namespace kanimal
                             }
                         }
 
-                        element.Image = Utilities.KleiHash(Utilities.GetSpriteBaseName(imageName));
+                        element.ImageHash = Utilities.KleiHash(Utilities.GetSpriteBaseName(imageName));
                         element.Index = Utilities.GetFrameCount(imageName);
                         // layer doesn't seem to actually be used for anything after it is parsed as a "folder"
                         // but it does need to have an associated string in the hash table so we will just
                         // write layer as the same as the image being used
-                        element.Layer = element.Image;
+                        element.Layer = element.ImageHash;
                         // Add this info to the AnimHashes dict
-                        AnimHashes[element.Image] = Utilities.GetSpriteBaseName(imageName);
-                        AnimHashes[element.Layer] = AnimHashes[element.Image];
+                        AnimHashes[element.ImageHash] = Utilities.GetSpriteBaseName(imageName);
+                        AnimHashes[element.Layer] = AnimHashes[element.ImageHash];
 
                         // find the interpolated value if required
                         // First, check if the timeline frame's timestamp is different to the key's.
@@ -629,7 +629,7 @@ namespace kanimal
             {
                 BuildData.FrameCount++;
 
-                var frameCount = Utilities.GetFrameCount(sprite.Name);
+                var frameCount = sprite.SpriteName.Index;
                 if (frameCount == 0) BuildData.SymbolCount++;
             }
         }

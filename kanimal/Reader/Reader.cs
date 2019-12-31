@@ -11,7 +11,8 @@ namespace kanimal
     // something absolutely daft like kanim -> kanim (which happens to be a good test)
     public abstract class Reader
     {
-        public Dictionary<int, string> BuildHashes, AnimHashes;
+        public Dictionary<int, SpriteBaseName> BuildHashes;
+        public Dictionary<int, string> AnimHashes;
         public KBuild.Build BuildData;
         public List<KBuild.Row> BuildTable;
         public KAnim.Anim AnimData;

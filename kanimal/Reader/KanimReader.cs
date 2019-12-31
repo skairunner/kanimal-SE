@@ -124,7 +124,7 @@ namespace kanimal
         // Reads the hashes and related strings
         private void ReadBuildHashes(BinaryReader reader)
         {
-            var buildHashes = new Dictionary<int, string>();
+            var buildHashes = new Dictionary<int, SpriteBaseName>();
             var numHashes = reader.ReadInt32();
             Utilities.LogToDump($"\n<Hashtable {numHashes}>", Logger);
             for (var i = 0; i < numHashes; i++)
@@ -132,7 +132,7 @@ namespace kanimal
                 var hash = reader.ReadInt32();
                 var str = reader.ReadPString();
                 Utilities.LogToDump($"  {hash} -> \"{str}\"", Logger);
-                buildHashes[hash] = str;
+                buildHashes[hash] = new SpriteBaseName(str);
             }
 
             BuildHashes = buildHashes;
@@ -152,7 +152,7 @@ namespace kanimal
                     image.PixelFormat);
                 Sprites.Add(new Sprite
                 {
-                    Name = $"{row.Name}_{row.Index}",
+                    Name = row.GetSpriteName(),
                     Bitmap = sprite
                 });
             }
@@ -236,7 +236,7 @@ namespace kanimal
                     {
                         var element = new KAnim.Element
                         {
-                            Image = reader.ReadInt32(),
+                            ImageHash = reader.ReadInt32(),
                             Index = reader.ReadInt32(),
                             Layer = reader.ReadInt32(),
                             Flags = reader.ReadInt32(),
@@ -256,13 +256,13 @@ namespace kanimal
                         string plainName;
                         try
                         {
-                            plainName = $"(\"{BuildHashes[element.Image]}\")";
+                            plainName = $"(\"{BuildHashes[element.ImageHash]}\")";
                         } catch (KeyNotFoundException)
                         {
                             plainName = "(plain name not found)";
                         }
                         Utilities.LogToDump(
-                            $"      Sub-element #{element.Index} is {element.Image} {plainName} @ layer {element.Layer}\n" +
+                            $"      Sub-element #{element.Index} is {element.ImageHash} {plainName} @ layer {element.Layer}\n" +
                             $"        Matrix: ({element.M1} {element.M2} {element.M3} {element.M4}), translate {element.M5} {element.M6}. Order {element.Order}",
                             Logger);
 
@@ -308,7 +308,7 @@ namespace kanimal
             foreach (var frame in bank.Frames)
             foreach (var element in frame.Elements)
             {
-                var name = $"{AnimHashes[element.Image]}_{element.Index}_{AnimHashes[element.Layer]}";
+                var name = $"{AnimHashes[element.ImageHash]}_{element.Index}_{AnimHashes[element.Layer]}";
                 if (!animIdMap.ContainsKey(name))
                 {
                     animIdMap[name] = key;

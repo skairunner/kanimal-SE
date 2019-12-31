@@ -28,13 +28,13 @@ namespace kanimal
             private AnimHashTable prevHashTable;
             public List<Frame> Frames;
 
-            public SortedDictionary<string, int> BuildHistogram(AnimHashTable animHashes)
+            public SortedDictionary<SpriteName, int> BuildHistogram(AnimHashTable animHashes)
             {
-                var overallHistogram = new SortedDictionary<string, int>();
+                var overallHistogram = new SortedDictionary<SpriteName, int>();
 
                 foreach (var frame in Frames)
                 {
-                    var perFrameHistogram = new SortedDictionary<string, int>();
+                    var perFrameHistogram = new SortedDictionary<SpriteName, int>();
                     foreach (var element in frame.Elements)
                     {
                         var name = element.FindName(animHashes);
@@ -53,6 +53,7 @@ namespace kanimal
                 return overallHistogram;
             }
 
+            // Return a map of SpriteName to 
             public Dictionary<string, int> BuildIdMap(AnimHashTable animHashes)
             {
                 if (animHashes == prevHashTable) return ElementIdMap;
@@ -63,7 +64,8 @@ namespace kanimal
                 {
                     var name = entry.Key;
                     var occurrences = entry.Value;
-                    for (var i = 0; i < occurrences; i++) idMap[Utilities.GetAnimIdName(name, i)] = index++;
+                    for (var i = 0; i < occurrences; i++)
+                        idMap[Utilities.GetAnimIdName(name, i)] = index++;
                 }
 
                 ElementIdMap = idMap;
@@ -86,11 +88,14 @@ namespace kanimal
                 public double X, Y, Angle, ScaleX, ScaleY;
             }
 
-            public int Image, Index, Layer, Flags;
-            // flags has just one value
-            // 1-> fg
-            // but we don't represent/deal with that in  spriter so we always leave
-            // it as 0
+            public int ImageHash, // The Klei Hashed sprite name for the image.
+                Index, // the index for this sprite. Klei animations tend to have sprites that are related to each other
+                // have the same name, but different numbers associated with them. When animated, they tend to use the
+                // sprites in order. E.g. water_0 is played, followed by water_1, water_2, water_3, then back to 0.
+                Layer,
+                Flags; // Flags only has one known value, 1 -> foreground.
+                // Spriter does not represent this, though, and it doesn't seem like it's used anyways, so for now
+                // we leave it as 0.
 
             public int ZIndex; // only used in scml -> kanim conversion
 
@@ -113,14 +118,9 @@ namespace kanimal
              */
             public float Order;
 
-            public string FindName(AnimHashTable animHashes)
+            public SpriteName FindName(AnimHashTable animHashes)
             {
-                return $"{animHashes[Image]}_{Index}";
-            }
-
-            public string FindFilename(AnimHashTable animHashes)
-            {
-                return $"{animHashes[Image]}_{Index}";
+                return new SpriteName($"{animHashes[ImageHash]}_{Index}");
             }
 
             // Takes the matrix values and returns a typical separate-component transform object
