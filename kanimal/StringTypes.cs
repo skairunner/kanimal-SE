@@ -15,23 +15,31 @@ namespace kanimal
             return Value.GetHashCode();
         }
 
+        public override string ToString()
+        {
+            return Value;
+        }
+
         public override bool Equals(object obj)
         {
-            try
-            {
-                return Value.Equals((obj as KName).Value);
-            }
-            catch (NullReferenceException)
+            if (ReferenceEquals(obj, null))
             {
                 return false;
             }
+
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            return Value.Equals((obj as KName).Value);
         }
 
         public static bool operator ==(KName lhs, KName rhs)
         {
-            if (lhs == null)
+            if (ReferenceEquals(lhs, null))
             {
-                if (rhs == null)
+                if (ReferenceEquals(rhs, null))
                 {
                     return true;
                 }
@@ -92,6 +100,11 @@ namespace kanimal
             return new SpriteBaseName(Utilities.GetSpriteBaseName(Value));
         }
 
+        public Filename ToFilename(string extension = ".png")
+        {
+            return new Filename(Value + extension);
+        }
+
         public SpriterObjectName ToSpriterObjectName(int suffix)
         {
             return new SpriterObjectName($"{Value}_{suffix}");
@@ -112,9 +125,9 @@ namespace kanimal
 
     public class SpriterObjectName : KName
     {
-        public SpriterObjectName(string objectname)
+        public SpriterObjectName(string objectName)
         {
-            Value = objectname;
+            Value = objectName;
         }
     }
 }

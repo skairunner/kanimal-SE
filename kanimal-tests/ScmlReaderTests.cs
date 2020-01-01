@@ -36,7 +36,7 @@ namespace kanimal_tests
             var hashtable = reader.BuildHashes;
             Assert.AreEqual(1, hashtable.Count);
             Assert.AreEqual(1696137821, hashtable.Keys.First());
-            Assert.AreEqual("square", hashtable.Values.First());
+            Assert.AreEqual("square", hashtable.Values.First().Value);
         }
     }
 }

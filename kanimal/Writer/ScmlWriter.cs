@@ -13,9 +13,9 @@ namespace kanimal
     public class ScmlWriter : Writer
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        // Maps filenames as strings to integers, because Spriter assigns an index
+        // Maps file names as strings to integers, because Spriter assigns an index
         // to each unique sprite, presumably to deduplicate its XML.
-        private Dictionary<SpriteName, int> filenameindex;
+        private Dictionary<Filename, int> filenameindex;
         
         protected XmlDocument Scml;
         protected XmlElement SpriterRoot;
@@ -88,14 +88,17 @@ namespace kanimal
                 folderNode.SetAttribute("id", i.ToString());
                 SpriterRoot.AppendChild(folderNode);
 
-                filenameindex = new Dictionary<SpriteName, int>();
+                filenameindex = new Dictionary<Filename, int>();
                 for (var fileIndex = 0; fileIndex < BuildData.FrameCount; fileIndex++)
                 {
                     var row = BuildTable[fileIndex];
-                    var key = $"{row.Name}_{row.Index}";
-                    if (filenameindex.ContainsKey(key)) key += "_" + fileIndex;
+                    var key = row.GetSpriteName().ToFilename();
+                    if (filenameindex.ContainsKey(key))
+                    {
+                        throw new Exception($"filenameindex already contains a key for the sprite {key.Value}!");
+                    }
 
-                    filenameindex[key] = fileIndex.ToString();
+                    filenameindex[key] = fileIndex;
 
                     var x = row.PivotX - row.PivotWidth / 2f;
                     var y = row.PivotY - row.PivotHeight / 2f;
@@ -166,7 +169,7 @@ namespace kanimal
 
             for (var frameIndex = 0; frameIndex < bank.FrameCount; frameIndex++)
             {
-                var occurenceMap = new OccurenceMap();
+                var occurenceMap = new ObjectNameMap();
                 var keyframe = AddKeyframe(frameIndex, rate);
                 var frame = bank.Frames[frameIndex];
                 for (var elementIndex = 0; elementIndex < frame.ElementCount; elementIndex++)
@@ -175,7 +178,8 @@ namespace kanimal
                     var element = frame.Elements[elementIndex];
                     occurenceMap.Update(element, AnimHashes);
 
-                    var occName = occurenceMap.FindOccurenceName(element, AnimHashes);
+                    
+                    var occName = occurenceMap.FindObjectName(element, AnimHashes);
                     Logger.Debug(occName);
 
                     objectRef.SetAttribute("id", idMap[occName].ToString());
@@ -203,25 +207,26 @@ namespace kanimal
             {
                 var timeline = Scml.CreateElement("timeline");
                 timeline.SetAttribute("id", entry.Value.ToString());
-                timeline.SetAttribute("name", entry.Key);
+                // This may unintentionally append _0 to timeline names?
+                timeline.SetAttribute("name", entry.Key.Value);
                 timelineMap[entry.Value] = timeline;
             }
 
             for (var frameIndex = 0; frameIndex < bank.FrameCount; frameIndex++)
             {
                 var frame = bank.Frames[frameIndex];
-                var occMap = new OccurenceMap();
+                var occMap = new ObjectNameMap();
                 for (var elementIndex = 0; elementIndex < frame.ElementCount; elementIndex++)
                 {
                     var keyframe = AddKeyframe(frameIndex, rate);
                     var element = frame.Elements[elementIndex];
                     occMap.Update(element, AnimHashes);
-                    var name = occMap.FindOccurenceName(element, AnimHashes);
+                    var name = occMap.FindObjectName(element, AnimHashes);
 
                     var trans = element.Decompose();
                     var object_def = Scml.CreateElement("object");
                     object_def.SetAttribute("folder", "0");
-                    var filename = element.FindFilename(AnimHashes);
+                    var filename = element.FindName(AnimHashes).ToFilename();
 
                     if (!filenameindex.ContainsKey(filename))
                     {
@@ -231,14 +236,14 @@ namespace kanimal
                             var sprite = new Sprite
                             {
                                 Bitmap = new Bitmap(1, 1),
-                                Name = filename
+                                Name = filename.ToSpriteName()
                             };
                             Sprites.Add(sprite);
                             // Also add it to the Spriter file
-                            filenameindex[filename] = (BuildData.FrameCount + 1).ToString();
+                            filenameindex[filename] = BuildData.FrameCount + 1;
                             var fileNode = Scml.CreateElement("file");
-                            fileNode.SetAttribute("id", filenameindex[filename]);
-                            fileNode.SetAttribute("name", filename);
+                            fileNode.SetAttribute("id", filenameindex[filename].ToString());
+                            fileNode.SetAttribute("name", filename.ToString());
                             fileNode.SetAttribute("width", 1f.ToStringInvariant());
                             fileNode.SetAttribute("height", 1f.ToStringInvariant());
                             fileNode.SetAttribute("pivot_x", 0f.ToStringInvariant());
@@ -252,7 +257,7 @@ namespace kanimal
                         }
                     }
 
-                    object_def.SetAttribute("file", filenameindex[filename]);
+                    object_def.SetAttribute("file", filenameindex[filename].ToString());
                     object_def.SetAttribute("x", (trans.X * 0.5f).ToStringInvariant());
                     object_def.SetAttribute("y", (-trans.Y * 0.5f).ToStringInvariant());
                     object_def.SetAttribute("angle", trans.Angle.ToStringInvariant());

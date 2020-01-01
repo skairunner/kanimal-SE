@@ -24,17 +24,22 @@ namespace kanimal
             public string Name;
             public int Hash, FrameCount;
             public float Rate;
-            public Dictionary<string, int> ElementIdMap;
+            public Dictionary<SpriterObjectName, int> ObjectIdMap;
             private AnimHashTable prevHashTable;
             public List<Frame> Frames;
 
-            public SortedDictionary<SpriteName, int> BuildHistogram(AnimHashTable animHashes)
+            // Trying to find the maximum occurances per frame of each sprite, so we know how many
+            // spriteName_#s we need to account for.
+            // E.g. if foo_0 is used up to twice a frame, we need foo_0_0 and foo_0_1.
+            // Otherwise we only need foo_0
+            public Dictionary<SpriteName, int> BuildHistogram(AnimHashTable animHashes)
             {
-                var overallHistogram = new SortedDictionary<SpriteName, int>();
+                var overallHistogram = new Dictionary<SpriteName, int>();
 
+                // Count the frequency of spriteNames used.
                 foreach (var frame in Frames)
                 {
-                    var perFrameHistogram = new SortedDictionary<SpriteName, int>();
+                    var perFrameHistogram = new Dictionary<SpriteName, int>();
                     foreach (var element in frame.Elements)
                     {
                         var name = element.FindName(animHashes);
@@ -44,7 +49,7 @@ namespace kanimal
                             perFrameHistogram[name] = 1;
                     }
 
-                    // update overall histograms once maximums are found
+                    // merge the frame's entries to the overall anim's entries
                     foreach (var entry in perFrameHistogram)
                         if (!overallHistogram.ContainsKey(entry.Key) || overallHistogram[entry.Key] < entry.Value)
                             overallHistogram[entry.Key] = entry.Value;
@@ -53,22 +58,26 @@ namespace kanimal
                 return overallHistogram;
             }
 
-            // Return a map of SpriteName to 
-            public Dictionary<string, int> BuildIdMap(AnimHashTable animHashes)
+            // Build a map of object indexes.
+            // We sequentially assign an object index to each object.
+            // So foo_0_0 and foo_0_1 will have different indices, but 
+            // foo_0_0 in a different frame will reference the same object... i think
+            public Dictionary<SpriterObjectName, int> BuildIdMap(AnimHashTable animHashes)
             {
-                if (animHashes == prevHashTable) return ElementIdMap;
+                if (animHashes == prevHashTable)
+                    return ObjectIdMap;
                 var histogram = BuildHistogram(animHashes);
-                var idMap = new Dictionary<string, int>();
+                var idMap = new Dictionary<SpriterObjectName, int>();
                 var index = 0;
                 foreach (var entry in histogram)
                 {
                     var name = entry.Key;
                     var occurrences = entry.Value;
                     for (var i = 0; i < occurrences; i++)
-                        idMap[Utilities.GetAnimIdName(name, i)] = index++;
+                        idMap[name.ToSpriterObjectName(i)] = index++;
                 }
 
-                ElementIdMap = idMap;
+                ObjectIdMap = idMap;
                 prevHashTable = animHashes;
                 return idMap;
             }
