@@ -22,18 +22,18 @@ namespace kanimal
         public int Y { get; }
         public int Width => sprite.Width;
         public int Height => sprite.Height;
-        public string Name => sprite.Name;
+        public SpriteName SpriteName => sprite.Name;
 
         public Bitmap Sprite => sprite.Bitmap;
 
-        public string BaseName => Utilities.GetSpriteBaseName(Name);
+        public SpriteBaseName BaseName => sprite.Name.ToBaseName();
     }
 
     // a sprite that will be packed
     public struct Sprite
     {
         public Bitmap Bitmap;
-        public string Name;
+        public SpriteName Name;
 
         public int Area => Bitmap.Height * Bitmap.Width;
         public int Height => Bitmap.Height;
@@ -44,11 +44,11 @@ namespace kanimal
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        private List<Tuple<string, Bitmap>> sprites;
+        private List<Tuple<SpriteName, Bitmap>> sprites;
         public Bitmap SpriteSheet;
         public List<PackedSprite> SpriteAtlas;
 
-        public TexturePacker(List<Tuple<string, Bitmap>> sprites)
+        public TexturePacker(List<Tuple<SpriteName, Bitmap>> sprites)
         {
             this.sprites = sprites;
             SpriteAtlas = new List<PackedSprite>();
@@ -57,16 +57,15 @@ namespace kanimal
         }
 
         // Returns a histogram of unique names (e.g. mySprite_0 and mySprite_1 are both named mySprite)
-        public Dictionary<string, int> GetHistogram()
+        public Dictionary<SpriteBaseName, int> GetHistogram()
         {
-            var histogram = new Dictionary<string, int>();
+            var histogram = new Dictionary<SpriteBaseName, int>();
             foreach (var entry in SpriteAtlas)
             {
-                var baseName = Utilities.GetSpriteBaseName(entry.Name);
-                if (histogram.ContainsKey(baseName))
-                    histogram[baseName] += 1;
+                if (histogram.ContainsKey(entry.BaseName))
+                    histogram[entry.BaseName] += 1;
                 else
-                    histogram[baseName] = 1;
+                    histogram[entry.BaseName] = 1;
             }
 
             return histogram;

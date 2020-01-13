@@ -12,10 +12,9 @@ namespace kanimal
 
         protected List<KBuild.Row> BuildTable;
         protected KBuild.Build BuildData;
-        protected Dictionary<int, string> BuildHashes;
+        protected Dictionary<int, SpriteBaseName> BuildHashes;
         protected KAnim.Anim AnimData;
         protected Dictionary<int, string> AnimHashes;
-        protected Dictionary<string, string> FilenameIndex;
         protected List<Sprite> Sprites;
         protected Reader Reader;
 

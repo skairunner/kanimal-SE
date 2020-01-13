@@ -9,5 +9,11 @@ namespace kanimal
             writer.Write(str.Length);
             writer.Write(str.ToCharArray());
         }
+        
+        public static void WritePString(this BinaryWriter writer, KName name)
+        {
+            writer.Write(name.Value.Length);
+            writer.Write(name.Value.ToCharArray());
+        }
     }
 }

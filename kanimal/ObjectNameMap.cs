@@ -4,7 +4,10 @@ namespace kanimal
 {
     using AnimHashTable = Dictionary<int, string>;
 
-    public class OccurenceMap : Dictionary<string, int>
+    // Spriter's object names are numbered sequentially from 0.
+    // This is arguably useful if multiple of the same sprite is included in a single animation frame
+    // Therefore, keep track of the objects included in a frame.
+    public class ObjectNameMap : Dictionary<SpriteName, int>
     {
         public void Update(KAnim.Element element, AnimHashTable animHashes)
         {
@@ -15,10 +18,10 @@ namespace kanimal
                 this[name] += 1;
         }
 
-        public string FindOccurenceName(KAnim.Element element, AnimHashTable animHashes)
+        public SpriterObjectName FindObjectName(KAnim.Element element, AnimHashTable animHashes)
         {
             var name = element.FindName(animHashes);
-            return $"{name}_{this[name]}";
+            return name.ToSpriterObjectName(this[name]);
         }
     }
 }

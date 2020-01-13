@@ -23,6 +23,13 @@ namespace kanimal
             logger.Debug(builder.ToString());
         }
 
+        public static void LogDebug(Logger logger, Dictionary<int, SpriteBaseName> buildHashes)
+        {
+            var builder = new StringBuilder();
+            foreach (var entry in buildHashes) builder.Append($"value {entry.Key} maps onto symbol {entry.Value.Value}\n");
+            logger.Debug(builder.ToString());
+        }
+
         public static void LogDebug(Logger logger, IToDebugString debuggable)
         {
             logger.Debug(debuggable.ToDebugString());

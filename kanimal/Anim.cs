@@ -24,17 +24,22 @@ namespace kanimal
             public string Name;
             public int Hash, FrameCount;
             public float Rate;
-            public Dictionary<string, int> ElementIdMap;
+            public Dictionary<SpriterObjectName, int> ObjectIdMap;
             private AnimHashTable prevHashTable;
             public List<Frame> Frames;
 
-            public SortedDictionary<string, int> BuildHistogram(AnimHashTable animHashes)
+            // Trying to find the maximum occurances per frame of each sprite, so we know how many
+            // spriteName_#s we need to account for.
+            // E.g. if foo_0 is used up to twice a frame, we need foo_0_0 and foo_0_1.
+            // Otherwise we only need foo_0
+            public Dictionary<SpriteName, int> BuildHistogram(AnimHashTable animHashes)
             {
-                var overallHistogram = new SortedDictionary<string, int>();
+                var overallHistogram = new Dictionary<SpriteName, int>();
 
+                // Count the frequency of spriteNames used.
                 foreach (var frame in Frames)
                 {
-                    var perFrameHistogram = new SortedDictionary<string, int>();
+                    var perFrameHistogram = new Dictionary<SpriteName, int>();
                     foreach (var element in frame.Elements)
                     {
                         var name = element.FindName(animHashes);
@@ -44,7 +49,7 @@ namespace kanimal
                             perFrameHistogram[name] = 1;
                     }
 
-                    // update overall histograms once maximums are found
+                    // merge the frame's entries to the overall anim's entries
                     foreach (var entry in perFrameHistogram)
                         if (!overallHistogram.ContainsKey(entry.Key) || overallHistogram[entry.Key] < entry.Value)
                             overallHistogram[entry.Key] = entry.Value;
@@ -53,20 +58,26 @@ namespace kanimal
                 return overallHistogram;
             }
 
-            public Dictionary<string, int> BuildIdMap(AnimHashTable animHashes)
+            // Build a map of object indexes.
+            // We sequentially assign an object index to each object.
+            // So foo_0_0 and foo_0_1 will have different indices, but 
+            // foo_0_0 in a different frame will reference the same object... i think
+            public Dictionary<SpriterObjectName, int> BuildIdMap(AnimHashTable animHashes)
             {
-                if (animHashes == prevHashTable) return ElementIdMap;
+                if (animHashes == prevHashTable)
+                    return ObjectIdMap;
                 var histogram = BuildHistogram(animHashes);
-                var idMap = new Dictionary<string, int>();
+                var idMap = new Dictionary<SpriterObjectName, int>();
                 var index = 0;
                 foreach (var entry in histogram)
                 {
                     var name = entry.Key;
                     var occurrences = entry.Value;
-                    for (var i = 0; i < occurrences; i++) idMap[Utilities.GetAnimIdName(name, i)] = index++;
+                    for (var i = 0; i < occurrences; i++)
+                        idMap[name.ToSpriterObjectName(i)] = index++;
                 }
 
-                ElementIdMap = idMap;
+                ObjectIdMap = idMap;
                 prevHashTable = animHashes;
                 return idMap;
             }
@@ -86,11 +97,14 @@ namespace kanimal
                 public double X, Y, Angle, ScaleX, ScaleY;
             }
 
-            public int Image, Index, Layer, Flags;
-            // flags has just one value
-            // 1-> fg
-            // but we don't represent/deal with that in  spriter so we always leave
-            // it as 0
+            public int ImageHash, // The Klei Hashed sprite name for the image.
+                Index, // the index for this sprite. Klei animations tend to have sprites that are related to each other
+                // have the same name, but different numbers associated with them. When animated, they tend to use the
+                // sprites in order. E.g. water_0 is played, followed by water_1, water_2, water_3, then back to 0.
+                Layer,
+                Flags; // Flags only has one known value, 1 -> foreground.
+                // Spriter does not represent this, though, and it doesn't seem like it's used anyways, so for now
+                // we leave it as 0.
 
             public int ZIndex; // only used in scml -> kanim conversion
 
@@ -113,14 +127,9 @@ namespace kanimal
              */
             public float Order;
 
-            public string FindName(AnimHashTable animHashes)
+            public SpriteName FindName(AnimHashTable animHashes)
             {
-                return $"{animHashes[Image]}_{Index}";
-            }
-
-            public string FindFilename(AnimHashTable animHashes)
-            {
-                return $"{animHashes[Image]}_{Index}";
+                return new SpriteName($"{animHashes[ImageHash]}_{Index}");
             }
 
             // Takes the matrix values and returns a typical separate-component transform object
