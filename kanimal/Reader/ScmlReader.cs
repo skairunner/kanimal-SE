@@ -31,6 +31,7 @@ namespace kanimal
 
         public bool AllowMissingSprites = true;
         public bool InterpolateMissingFrames = true;
+        public bool Debone = true;
 
         public ScmlReader(Stream scmlStream, Dictionary<Filename, Bitmap> sprites)
         {
@@ -48,7 +49,19 @@ namespace kanimal
                     ExceptionDispatchInfo.Capture(e).Throw();
                 }
             }
-            
+            if (Debone)
+            {
+                try
+                {
+                    scml = new DebonerProcessor().Process(scml); // replace the scml with deboned scml
+                }
+                catch (Exception e)
+                {
+                    Logger.Fatal($"Failed to debone the scml document. Original exception is as follows:");
+                    ExceptionDispatchInfo.Capture(e).Throw();
+                }
+            }
+
             inputSprites = sprites;
         }
         
@@ -73,6 +86,18 @@ namespace kanimal
                 catch (Exception e)
                 {
                     Logger.Fatal($"Failed to interpolate in-between frames. Original exception is as follows:");
+                    ExceptionDispatchInfo.Capture(e).Throw();
+                }
+            }
+            if (Debone)
+            {
+                try
+                {
+                    scml = new DebonerProcessor().Process(scml); // replace the scml with deboned scml
+                }
+                catch (Exception e)
+                {
+                    Logger.Fatal($"Failed to debone the scml document. Original exception is as follows:");
                     ExceptionDispatchInfo.Capture(e).Throw();
                 }
             }
@@ -258,8 +283,15 @@ namespace kanimal
             var entity = scml.GetElementsByTagName("entity")[0];
             var animations = entity.ChildNodes.GetElements();
             var animCount = 0;
+
+            /* error checking if user has intervals that aren't consistent because ONI only processes animations
+             * as if each frame is the same interval (in ms) from the last */
             var hasInconsistentIntervals = false;
             var inconsistentAnims = new HashSet<string>();
+
+            /* error checking if user has accidentally used pivots in timeline rather than setting pivot on original sprite */
+            var hasPivotsSpecifiedInTimeline = false;
+            var pivotAnims = new HashSet<string>();
 
             foreach (var anim in animations)
             {
@@ -471,6 +503,11 @@ namespace kanimal
                         var xOffset = Interpolate("x", 0f);
                         var yOffset = Interpolate("y", 0f);
 
+                        if (frame_object_node.Attributes["pivot_x"] != null || frame_object_node.Attributes["pivot_y"] != null)
+                        {
+                            hasPivotsSpecifiedInTimeline = true;
+                            pivotAnims.Add(bank.Name);
+                        }
 
                         var animdata = new AnimationData
                         {
@@ -532,6 +569,17 @@ namespace kanimal
                 }
 
                 bank.FrameCount = frameCount;
+                /* if interval is -1 we have encountered an animation with only one keyframe
+                 * because -1 means we weren't able to calculate an interval
+                 * 
+                 * we shouldn't return a rate of -1000 = 1000 / -1 in this case
+                 * instead a logical rate would be to consider the interval
+                 * as just the length of the animation */
+                if (interval == -1)
+                {
+                    Logger.Debug("Encountered an animation with only one keyframe. Interpreting as having an interval between frames equal to the entire duration of the animation.");
+                    interval = int.Parse(anim.GetAttribute("length"));
+                }
                 bank.Rate = (float) Utilities.MS_PER_S / interval;
                 AnimData.Anims.Add(bank);
             }
@@ -541,6 +589,13 @@ namespace kanimal
                 var anims = inconsistentAnims.ToList().Join();
                 throw new ProjectParseException(
                     $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.");
+            }
+
+            if (hasPivotsSpecifiedInTimeline)
+            {
+                var anims = pivotAnims.ToList().Join();
+                throw new ProjectParseException(
+                    $"SCML format exception: There were pivot points specified in timelines rather than only on the sprites in anims {anims}. Aborting read.");
             }
 
             AnimData.AnimCount = animCount;

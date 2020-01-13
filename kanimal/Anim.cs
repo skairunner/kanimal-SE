@@ -73,8 +73,9 @@ namespace kanimal
                 {
                     var name = entry.Key;
                     var occurrences = entry.Value;
-                    for (var i = 0; i < occurrences; i++)
+                    for (var i = 0; i < occurrences; i++) {
                         idMap[name.ToSpriterObjectName(i)] = index++;
+                    }
                 }
 
                 ObjectIdMap = idMap;
@@ -127,9 +128,27 @@ namespace kanimal
              */
             public float Order;
 
+            // Finding the name of a sprite should only look at the sprite itself, not its index in the
+            // symbol because this way all indices of a symbol can be part of the same timeline and just
+            // be sprite-swapped between in the SCML
             public SpriteName FindName(AnimHashTable animHashes)
             {
+                return new SpriteName(animHashes[ImageHash]);
+            }
+
+            // This method gets the name of the sprite plus its index which we don't use when building our internal
+            // representation of the animation but we need to use in order to reference the sprite on disk for actually
+            // indicating which sprite out of the symbol's frames we need to swap to on any given frame
+            public SpriteName FindNameWithIndex(AnimHashTable animHashes)
+            {
                 return new SpriteName($"{animHashes[ImageHash]}_{Index}");
+            }
+
+            // This gets the name of the sprite but at any given index in the symbol. This is important for testing if certain indices
+            // exist within a given symbol
+            public SpriteName FindNameWithGivenIndex(AnimHashTable animHashes, int index)
+            {
+                return new SpriteName($"{animHashes[ImageHash]}_{index}");
             }
 
             // Takes the matrix values and returns a typical separate-component transform object

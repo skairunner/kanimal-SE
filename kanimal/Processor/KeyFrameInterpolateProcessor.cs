@@ -159,7 +159,7 @@ namespace kanimal
             /* build the frame array - description is in Alternate.Animation */
             List<List<ProcessingFrame>> frameArray = new List<List<ProcessingFrame>>();
             /* count of frames to know how large the frame array should be */
-            int numberOfFrames = length / interval;
+            int numberOfFrames = length / interval + 1;
             /* for each sprite and bone id a list of frames is created */
             for (int i = 0; i < infoProvider.Size(); i++)
             {
@@ -173,8 +173,15 @@ namespace kanimal
                 frameArray.Add(frames);
             }
 
+            /* error checking to see if the animation doesn't have every frame snapped to an interval
+             * because ONI expects every frame to have a consistent interval so if the frames aren't
+             * snapped they will be placed wrong */
             var hasBrokenSnapping = false;
             var brokenAnims = new HashSet<string>();
+
+            /* error checking if user has accidentally used pivots in timeline rather than setting pivot on original sprite */
+            var hasPivotsSpecifiedInTimeline = false;
+            var pivotAnims = new HashSet<string>();
 
             /* read all the data from mainline 
              * oddly it is not needed to read which timeline key frame is associated
@@ -298,6 +305,12 @@ namespace kanimal
                                 scaleY = float.Parse(child.GetAttribute("scale_y"));
                             }
                             frameArray[timelineIndex][frameIndex].Populate(folder, file, x, y, angle, scaleX, scaleY);
+
+                            if (child.HasAttribute("pivot_x") || child.HasAttribute("pivot_y"))
+                            {
+                                hasPivotsSpecifiedInTimeline = true;
+                                pivotAnims.Add(name);
+                            }
                         }
                     }
                 }
@@ -308,6 +321,13 @@ namespace kanimal
                 var anims = brokenAnims.ToList().Join();
                 throw new ProjectParseException(
                     $"SCML format exception: The timelines in anims {anims} had frames at times not snapped to the running interval {interval} ms. Aborting read.");
+            }
+
+            if (hasPivotsSpecifiedInTimeline)
+            {
+                var anims = pivotAnims.ToList().Join();
+                throw new ProjectParseException(
+                    $"SCML format exception: There were pivot points specified in timelines rather than only on the sprites in anims {anims}. Aborting read.");
             }
 
             /* determine which frames need to be interpolated by checking which frames are key frames in the mainline */

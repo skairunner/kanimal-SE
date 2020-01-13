@@ -45,7 +45,9 @@ namespace kanimal
             // Finally, output to a file
             var files = new OutputFiles();
             var scmlStream = files[$"{BuildData.Name}.scml"] = new MemoryStream();
-            var writer = new XmlTextWriter(scmlStream, Encoding.Unicode);
+            // Output is encoded in ASCII since Klei's binary file format only supports ASCII
+            // so this should be a more genuine representation than a Unicode output
+            var writer = new XmlTextWriter(scmlStream, Encoding.ASCII);
             writer.Formatting = Formatting.Indented;
             Scml.WriteTo(writer);
             writer.Flush();
@@ -196,6 +198,36 @@ namespace kanimal
             }
         }
 
+        /// <summary>
+        /// Takes in an element in a frame and determines what a preceding file name would be.
+        /// This is necessary because for some reason in some select animations, klei only exports
+        /// every other frame of an animation into the sprite atlas and build file but references
+        /// every frame in the animation.
+        /// 
+        /// Ex. in the oilfloater the skirt has like twenty animation states but only skirt_0, skirt_2, skirt_4, etc...
+        /// are defined but the animation looks for skirt_0, skirt_1, skirt_2, skirt_3, etc...
+        /// 
+        /// So when we find an undefined filename like skirt_3 rather than immediately erroring we go back in idices to
+        /// see if another frame for this symbol exists, so first we check skirt_2 (b/c 2 = 3 - 1) and then if that
+        /// didn't exist we would try skirt_1 ... all the way to skirt_0 before stopping.
+        /// </summary>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        private Filename GetPrecedingFilename(KAnim.Element element)
+        {
+            int index = element.Index - 1;
+            while (index >= 0)
+            {
+                var filename = element.FindNameWithGivenIndex(AnimHashes, index).ToFilename();
+                if (filenameindex.ContainsKey(filename))
+                {
+                    return filename;
+                }
+                index--;
+            }
+            return null;
+        }
+
         protected virtual void AddTimelineInfo(XmlElement parent, int animIndex)
         {
             var bank = AnimData.Anims[animIndex];
@@ -226,15 +258,23 @@ namespace kanimal
                     var trans = element.Decompose();
                     var object_def = Scml.CreateElement("object");
                     object_def.SetAttribute("folder", "0");
-                    var filename = element.FindName(AnimHashes).ToFilename();
+                    // Here we need to explicitly get the file name with its associated index because we are using the filename
+                    // to reference the actual image which does include the index of the frame of its symbol in the name
+                    var filename = element.FindNameWithIndex(AnimHashes).ToFilename();
 
                     if (!filenameindex.ContainsKey(filename))
                     {
-                        if (FillMissingSprites)
+                        // Check if a preceding frame in this symbol exists that we can use before
+                        // deciding that the sprite/file does not exist
+                        var precedingFilename = GetPrecedingFilename(element);
+                        if (precedingFilename != null)
+                        {
+                            filename = precedingFilename;
+                        }
+                        else if (FillMissingSprites)
                         {
                             // Must generate the missing sprite.
-                            var sprite = new Sprite
-                            {
+                            var sprite = new Sprite {
                                 Bitmap = new Bitmap(1, 1),
                                 Name = filename.ToSpriteName()
                             };
