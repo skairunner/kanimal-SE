@@ -115,7 +115,8 @@ namespace kanimal_cli
                 case "scml":
                     var scmlWriter = new ScmlWriter(reader)
                     {
-                        FillMissingSprites = !opt.Strict
+                        FillMissingSprites = !opt.Strict,
+                        AllowDuplicateSprites = !opt.Strict
                     };
                     scmlWriter.SaveToDir(Path.Join(opt.OutputPath));
                     break;
