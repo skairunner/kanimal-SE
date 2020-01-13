@@ -30,6 +30,7 @@ namespace kanimal
         private Dictionary<Filename, Bitmap> inputSprites; // The keys in this dictionary are filenames, *with* the file extension, if it exists.
 
         public bool AllowMissingSprites = true;
+        public bool AllowInFramePivots = true;
         public bool InterpolateMissingFrames = true;
         public bool Debone = true;
 
@@ -587,15 +588,26 @@ namespace kanimal
             if (hasInconsistentIntervals)
             {
                 var anims = inconsistentAnims.ToList().Join();
-                throw new ProjectParseException(
-                    $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.");
+                string error = $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.";
+                if (!InterpolateMissingFrames)
+                {
+                    error += " Try enabling keyframe interpolation with the \"-i\" flag and try again.";
+                }
+                throw new ProjectParseException(error);
             }
 
             if (hasPivotsSpecifiedInTimeline)
             {
                 var anims = pivotAnims.ToList().Join();
-                throw new ProjectParseException(
-                    $"SCML format exception: There were pivot points specified in timelines rather than only on the sprites in anims {anims}. Aborting read.");
+                if (AllowInFramePivots)
+                {
+                    Logger.Warn($"Encountered pivot points specified in timelines in anims {anims}. These pivot point changes will not be respected. Strict-mode is off. Converting anyway.");
+                }
+                else
+                {
+                    throw new ProjectParseException($"SCML format exception: There were pivot points specified in timelines rather than only on the sprites in anims {anims}. Aborting read.");
+                }
+
             }
 
             AnimData.AnimCount = animCount;
