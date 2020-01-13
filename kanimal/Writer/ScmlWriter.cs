@@ -112,7 +112,7 @@ namespace kanimal
 
                     var fileNode = Scml.CreateElement("file");
                     fileNode.SetAttribute("id", fileIndex.ToString());
-                    fileNode.SetAttribute("name", $"{row.Name}_{row.Index}");
+                    fileNode.SetAttribute("name", $"{row.Name}_{row.Index}.png");
                     fileNode.SetAttribute("width", ((int) row.Width).ToString());
                     fileNode.SetAttribute("height", ((int) row.Height).ToString());
                     fileNode.SetAttribute("pivot_x", pivotX.ToStringInvariant());

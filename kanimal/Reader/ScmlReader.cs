@@ -129,6 +129,9 @@ namespace kanimal
             Logger.Info("Reading image files.");
             ReadProjectSprites();
 
+            // Only use the sprites that are included in the project
+            inputSprites = inputSprites.Where(sprite => projectSprites.ContainsKey(sprite.Key.ToSpriteName())).ToDictionary(x => x.Key, x => x.Value);
+
             // Also set the output list of sprites
             Sprites = new List<Sprite>();
             Sprites = inputSprites.Select(sprite => new Sprite {Bitmap = sprite.Value, Name = sprite.Key.ToSpriteName()}).ToList();
