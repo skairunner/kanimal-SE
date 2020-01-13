@@ -34,10 +34,8 @@ namespace kanimal
         public bool InterpolateMissingFrames = true;
         public bool Debone = true;
 
-        public ScmlReader(Stream scmlStream, Dictionary<Filename, Bitmap> sprites)
+        private XmlDocument HandleProcessors(XmlDocument scml)
         {
-            scml = new XmlDocument();
-            scml.Load(scmlStream);
             if (InterpolateMissingFrames)
             {
                 try
@@ -62,7 +60,14 @@ namespace kanimal
                     ExceptionDispatchInfo.Capture(e).Throw();
                 }
             }
+            return scml;
+        }
 
+        public ScmlReader(Stream scmlStream, Dictionary<Filename, Bitmap> sprites)
+        {
+            scml = new XmlDocument();
+            scml.Load(scmlStream);
+            scml = HandleProcessors(scml);
             inputSprites = sprites;
         }
         
@@ -78,30 +83,7 @@ namespace kanimal
                 Logger.Fatal($"You must specify a path to load the SCML from. Original exception is as follows:");
                 ExceptionDispatchInfo.Capture(e).Throw();
             }
-            if (InterpolateMissingFrames)
-            {
-                try
-                {
-                    scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
-                }
-                catch (Exception e)
-                {
-                    Logger.Fatal($"Failed to interpolate in-between frames. Original exception is as follows:");
-                    ExceptionDispatchInfo.Capture(e).Throw();
-                }
-            }
-            if (Debone)
-            {
-                try
-                {
-                    scml = new DebonerProcessor().Process(scml); // replace the scml with deboned scml
-                }
-                catch (Exception e)
-                {
-                    Logger.Fatal($"Failed to debone the scml document. Original exception is as follows:");
-                    ExceptionDispatchInfo.Capture(e).Throw();
-                }
-            }
+            scml = HandleProcessors(scml);
             // Due to scml conventions, our input directory is the same as the scml file's
             var inputDir = Path.Join(scmlpath, "../");
             inputSprites = new Dictionary<Filename, Bitmap>();
@@ -307,6 +289,9 @@ namespace kanimal
                 Logger.Debug($"bank.name={bank.Name}\nhashTable={bank.Hash}");
                 bank.Frames = new List<KAnim.Frame>();
 
+                // the consistent interval between frames
+                // -1 indicates it starts off as being unknown
+                // since all valid values for the interval will be >= 0
                 var interval = -1;
 
                 var timelines = anim.ChildNodes;

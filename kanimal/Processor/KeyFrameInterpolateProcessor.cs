@@ -75,6 +75,11 @@ namespace kanimal
         /* the length of the animation in milliseconds - integer */
         public int Length { get; set; }
 
+        /* if the animation is looped - i.e. does the interpolator
+         * consider the animation as wrapping around from the end-to-the-start
+         * or does it consider the end as not having to match up with the start */
+        public bool Looping { get; set; }
+
         /* 2d array of the frames, 1st axis is the ids of the timelines for all
          * of the sprites and bones in the animation, 2nd axis is the timesteps */
         public List<List<ProcessingFrame>> FrameArray { get; set; }
@@ -354,6 +359,12 @@ namespace kanimal
                 }
             }
 
+            var looping = true;
+            if (animation.HasAttribute("looping"))
+            {
+                looping = bool.Parse(animation.Attributes["looping"].Value);
+            }
+
             /* create an additional array that indicates presence of each timeline on a per-frame basis */
             List<List<bool>> presenceArray = new List<List<bool>>();
             for (int i = 0; i < infoProvider.Size(); i++)
@@ -380,21 +391,21 @@ namespace kanimal
                     }
                     presenceArray[i][j] = currentPresence;
                 }
-                for (int j = 0; j < numberOfFrames; j++)
-                {
-                    /* if this frame is a key frame then update the current presence based on if there
-                     * is a frame populated at this location */
-                    if (keyFrames[j])
-                    {
-                        currentPresence = (frameArray[i][j] != null);
-                    }
-                    presenceArray[i][j] = currentPresence;
-                }
                 /* executing the loop twice is the most straightforward way to ensure that a keyframe at the end
-                 * of the timeline wraps around to the front of the timeline
-                 * this does mess with animations that aren't looped that don't have keyframes at time = 0 but that just doesn't make
-                 * much sense (who wouldn't keyframe at time = 0 for a non-looping animation!)
-                 * so I'll just document that and ignore that problem for now */
+                 * of the timeline wraps around to the front of the timeline */
+                if (looping)
+                {
+                    for (int j = 0; j < numberOfFrames; j++)
+                    {
+                        /* if this frame is a key frame then update the current presence based on if there
+                         * is a frame populated at this location */
+                        if (keyFrames[j])
+                        {
+                            currentPresence = (frameArray[i][j] != null);
+                        }
+                        presenceArray[i][j] = currentPresence;
+                    }
+                }
             }
 
             /* for every frame with presence in the array set to true that still has a null frame
@@ -419,25 +430,28 @@ namespace kanimal
                         beforeFrame = frameArray[i][j];
                         beforeFrameIndex = j;
                         /* probe forward to find the after array when a before array is found
-                         * will use a endless loop because eventually at least we know we will
-                         * terminate when it hits the exact same before array */
+                         * if not looping it only probes until the end of the timeline */
                         int jPrime = j + 1;
-                        if (jPrime >= numberOfFrames)
+                        if (jPrime < numberOfFrames || looping)
                         {
-                            jPrime = 0;
-                        }
-                        while (presenceArray[i][jPrime])
-                        {
-                            if (frameArray[i][jPrime] != null && frameArray[i][jPrime].IsPopulated())
-                            {
-                                afterFrame = frameArray[i][jPrime];
-                                afterFrameIndex = jPrime;
-                                break;
-                            }
-                            jPrime++;
                             if (jPrime >= numberOfFrames)
                             {
                                 jPrime = 0;
+                            }
+                            while (presenceArray[i][jPrime] &&
+                                (looping || jPrime < numberOfFrames))
+                            {
+                                if (frameArray[i][jPrime] != null && frameArray[i][jPrime].IsPopulated())
+                                {
+                                    afterFrame = frameArray[i][jPrime];
+                                    afterFrameIndex = jPrime;
+                                    break;
+                                }
+                                jPrime++;
+                                if (jPrime >= numberOfFrames)
+                                {
+                                    jPrime = 0;
+                                }
                             }
                         }
                         /* if we found a before frame but couldn't find an after frame this means that there was a frame that is completely defined
@@ -470,80 +484,77 @@ namespace kanimal
                         frameArray[i][j].Populate(beforeFrame.Folder, beforeFrame.File, x, y, angle, xScale, yScale);
                     }
                 }
-            }
-            for (int i = 0; i < infoProvider.Size(); i++)
-            {
-                ProcessingFrame beforeFrame = null;
-                ProcessingFrame afterFrame = null;
-                int beforeFrameIndex = -1;
-                int afterFrameIndex = -1;
-                for (int j = 0; j < numberOfFrames; j++)
+                /* interpolation is run twice to fix issue where time = 0 is not key frame
+                 * since otherwise every frame before the first keyframe will not be processed */
+                if (looping)
                 {
-                    /* skip this frame if it isn't supposed to be present */
-                    if (!presenceArray[i][j])
+                    for (int j = 0; j < numberOfFrames; j++)
                     {
-                        continue;
-                    }
-                    /* if this frame exists and is populated then it will be used
-                     * as the before frame */
-                    if (frameArray[i][j] != null && frameArray[i][j].IsPopulated())
-                    {
-                        beforeFrame = frameArray[i][j];
-                        beforeFrameIndex = j;
-                        /* probe forward to find the after array when a before array is found
-                         * will use a endless loop because eventually at least we know we will
-                         * terminate when it hits the exact same before array */
-                        int jPrime = j + 1;
-                        if (jPrime >= numberOfFrames)
+                        /* skip this frame if it isn't supposed to be present */
+                        if (!presenceArray[i][j])
                         {
-                            jPrime = 0;
+                            continue;
                         }
-                        while (presenceArray[i][jPrime])
+                        /* if this frame exists and is populated then it will be used
+                         * as the before frame */
+                        if (frameArray[i][j] != null && frameArray[i][j].IsPopulated())
                         {
-                            if (frameArray[i][jPrime] != null && frameArray[i][jPrime].IsPopulated())
-                            {
-                                afterFrame = frameArray[i][jPrime];
-                                afterFrameIndex = jPrime;
-                                break;
-                            }
-                            jPrime++;
+                            beforeFrame = frameArray[i][j];
+                            beforeFrameIndex = j;
+                            /* probe forward to find the after array when a before array is found
+                             * will use a endless loop because eventually at least we know we will
+                             * terminate when it hits the exact same before array */
+                            int jPrime = j + 1;
                             if (jPrime >= numberOfFrames)
                             {
                                 jPrime = 0;
                             }
+                            while (presenceArray[i][jPrime])
+                            {
+                                if (frameArray[i][jPrime] != null && frameArray[i][jPrime].IsPopulated())
+                                {
+                                    afterFrame = frameArray[i][jPrime];
+                                    afterFrameIndex = jPrime;
+                                    break;
+                                }
+                                jPrime++;
+                                if (jPrime >= numberOfFrames)
+                                {
+                                    jPrime = 0;
+                                }
+                            }
+                            /* if we found a before frame but couldn't find an after frame this means that there was a frame that is completely defined
+                             * but there are more frames that need to be interpolated from this frame only
+                             * since this is the only frame, spriter interprets this frame as being the frame used for all of the interpolated positions
+                             * in which this sprite exists */
+                            if (afterFrame == null)
+                            {
+                                Logger.Debug("Could not find after frame to interpolate between. Interpreting this to mean that this frame is expected to take the entire duration of the timeline.");
+                                afterFrame = beforeFrame;
+                                afterFrameIndex = beforeFrameIndex;
+                            }
                         }
-                        /* if we found a before frame but couldn't find an after frame this means that there was a frame that is completely defined
-                         * but there are more frames that need to be interpolated from this frame only
-                         * since this is the only frame, spriter interprets this frame as being the frame used for all of the interpolated positions
-                         * in which this sprite exists */
-                        if (afterFrame == null)
+                        else if (beforeFrame != null && afterFrame != null)
                         {
-                            Logger.Debug("Could not find after frame to interpolate between. Interpreting this to mean that this frame is expected to take the entire duration of the timeline.");
-                            afterFrame = beforeFrame;
-                            afterFrameIndex = beforeFrameIndex;
+                            float x = LinearInterpolate(beforeFrame.X, afterFrame.X, beforeFrameIndex,
+                                afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
+                            float y = LinearInterpolate(beforeFrame.Y, afterFrame.Y, beforeFrameIndex,
+                                afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
+                            float angle = LinearInterpolateAngle(beforeFrame.Angle, afterFrame.Angle, beforeFrameIndex,
+                                afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
+                            float xScale = LinearInterpolate(beforeFrame.ScaleX, afterFrame.ScaleX, beforeFrameIndex,
+                                afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
+                            float yScale = LinearInterpolate(beforeFrame.ScaleY, afterFrame.ScaleY, beforeFrameIndex,
+                                afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
+                            if (frameArray[i][j] == null)
+                            {
+                                frameArray[i][j] = new ProcessingFrame(beforeFrame.ParentId, beforeFrame.ZIndex);
+                            }
+                            frameArray[i][j].Populate(beforeFrame.Folder, beforeFrame.File, x, y, angle, xScale, yScale);
                         }
-                    }
-                    else if (beforeFrame != null && afterFrame != null)
-                    {
-                        float x = LinearInterpolate(beforeFrame.X, afterFrame.X, beforeFrameIndex,
-                            afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
-                        float y = LinearInterpolate(beforeFrame.Y, afterFrame.Y, beforeFrameIndex,
-                            afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
-                        float angle = LinearInterpolateAngle(beforeFrame.Angle, afterFrame.Angle, beforeFrameIndex,
-                            afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
-                        float xScale = LinearInterpolate(beforeFrame.ScaleX, afterFrame.ScaleX, beforeFrameIndex,
-                            afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
-                        float yScale = LinearInterpolate(beforeFrame.ScaleY, afterFrame.ScaleY, beforeFrameIndex,
-                            afterFrameIndex + ((afterFrameIndex < beforeFrameIndex) ? numberOfFrames : 0), j);
-                        if (frameArray[i][j] == null)
-                        {
-                            frameArray[i][j] = new ProcessingFrame(beforeFrame.ParentId, beforeFrame.ZIndex);
-                        }
-                        frameArray[i][j].Populate(beforeFrame.Folder, beforeFrame.File, x, y, angle, xScale, yScale);
                     }
                 }
             }
-            /* interpolation is run twice to fix issue where time = 0 is not key frame */
 
             return new ProcessingAnimation(name, interval, length, frameArray, infoProvider);
         }
