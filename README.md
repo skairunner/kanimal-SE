@@ -20,6 +20,7 @@ KSE is, at its base, a port of kparserX from Java to C#, and wouldn't have been 
 ## Features
 
 * Multi-directional conversion between compatible formats: kanim → scml, scml → kanim, kanim → kanim, scml → scml are all possible.
+* Support for most Spriter features for making custom ONI animations. Most notably - handles interpolation between keyframes with the `-i` flag.
 * Cross-platform executable
 * Actively maintained
 
@@ -41,7 +42,7 @@ Generally, there are two ways to invoke all of KSE's conversion features: the sh
 
 1. You need to have "loose" kanim files. That is, you should have three files ready: `[NAME].png`, `[NAME]_anim.bytes`, and `[NAME]_build.bytes`. ONI stores these files in its `[steam directory]/OxygenNotIncluded_Data/sharedassets#.assets` files. Use a tool such as [uTinyRipper](https://github.com/mafaca/UtinyRipper) to unpack  the files. The three kanim files you need should be located in the TextAssets and Texture2D directories. It is highly recommended to move all the files to the same directory.
 2. Open a terminal of your choice and navigate to the directory with your kanim files. On Windows, it is usually `cmd`.
-3. The parameters for invoking KSE are: 
+3. The parameters for invoking KSE are:
 ```
 # on windows
 $ kanimal-cli.exe scml [NAME].png [NAME]_anim.bytes [NAME]_build.bytes
@@ -64,7 +65,7 @@ It is possible to batch convert *Oxygen Not Included* assets to Spriter files.
 ```
 $ kanimal-cli batch-convert /path/to/assets/directory
 ```
-3. The result files will be output in the `output/` directory relative to the current working directory. You can specify a different path with the `-o/--output` flag, as always. 
+3. The result files will be output in the `output/` directory relative to the current working directory. You can specify a different path with the `-o/--output` flag, as always.
 
 ### scml → kanim
 The process is very similar to the previous one.
@@ -79,6 +80,7 @@ $ kanimal-cli.exe kanim [NAME].scml
 $ ./kanimal-cli kanim [NAME].scml
 ```
 
+Currently the ability to use Spriter's interpolation between keyframes features is opt-in. To use it you must use the `-i/--interpolate` switch.
 Just like in the kanim → scml case, the files are output by default into the `output/` directory, and a specific path can be specified with the `-o/--output` switch.
 
 ### Arbitrary directions
@@ -95,6 +97,7 @@ Other available switches are as follows:
 | `-o/--output` | Specify an output directory |
 | `-v/--verbose` | Set verbosity level to DEBUG (default INFO)|
 | `-s/--silent` | Set verbosity level to FATAL (default INFO). This means no messages are logged on successful conversion, including warnings. |
+| `-i/--interpolate` | Interpolate SCML files on load. This means that all in-between frames are generated from the keyframes. |
 |`-S/--strict` | Enforce strict conversion.|
 
 ### Kanim dump
@@ -106,10 +109,11 @@ $ kanimal-cli dump [FILES...]
 ## Things to know
 
 ### Spriter
-* You cannot change the pivot point from frame to frame. However, you *can* change the pivot for the entire sprite from the right side Pallate menu.
-* Spriter's intrinsic interpolation is supported.
-* Each sprite must have an underscore and a number at the end of their name, but before the file extension. The number should start at 0 and be sequential. So, if you have three sprites called "blob", they should be respectively named `blob_0.png`, `blob_1.png`, and `blob_2.png`.
-* All frames in a given animation should be spaced at the same interval. Klei uses 33ms spacing between frames by default, but any interval will do. Enabling snapping is highly recommended.
+* You cannot change the pivot point from frame to frame. However, you *can* change the pivot for the entire sprite from the right side Pallate menu. If you change the pivot point in a specific frame that change will not be respected by the converter. It will throw a warning for you to indicate that this is not allowed. This will be changed to an error in strict conversion mode.
+* Spriter's intrinsic interpolation is supported if you use the `-i/--interpolate` option. Currently the `-i` option works best if you keyframe the start and the end frame. For example if you want a 30 frame animation that you should have length 33ms * 30 = 990ms where you must key 0ms and 990ms in order for interpolation to work. If you have a use case in which providing key frames on the end of animation is not sufficient or where interpolation seems to fail please open an issue.
+* Each sprite must have an underscore and a number at the end of their name, but before the file extension. The number should start at 0 and be sequential. So, if you have three sprites called "blob", they should be respectively named `blob_0.png`, `blob_1.png`, and `blob_2.png`. Each name before the underscore with number is considered an individual *symbol* which means an object of sorts in the animation that can change between sprites. So going with the `blob` example: `blob` would be the symbol and could be switched between any of the three sprites `blob_0`, `blob_1`, `blob_2`. When you want to change what sprite is used in a certain location in your image use symbols and this [link](http://www.brashmonkey.com/spriter_manual/swapping%20the%20image%20of%20a%20sprite.htm) to see how to switch the sprites for that object. This keeps all the sprite changes on just a single timeline rather than needing multiple timelines for a single part just because it has sprite changes.
+* Spriter's sprite swapping feature only works when swapping between sprites of the same symbol. So going from `blob_0` to `blob_1` or `blob_2` is fine but going from `body_0` to `head_0` will probably break.
+* All frames in a given animation should be spaced at the same interval. Klei uses 33ms spacing between frames by default, but any interval will do. Enabling snapping is highly recommended. If there isn't a consistent interval, the converter will throw an error.
 ![magnet tool location](https://raw.githubusercontent.com/skairunner/kparserX/master/imgs/timeline_settings_buttons.png)
 ![example of enable snapping](https://raw.githubusercontent.com/skairunner/kparserX/master/imgs/timeline_settings_enable_snapping.png)
     * Note that this is also valid, because even if frames are missing, the interval between each frame is consistent:
