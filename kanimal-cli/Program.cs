@@ -58,7 +58,10 @@ namespace kanimal_cli
                     var scml = files.Find(path => path.EndsWith(".scml"));
                     var scmlreader = new ScmlReader(scml)
                     {
-                        AllowMissingSprites = !opt.Strict
+                        AllowMissingSprites = !opt.Strict,
+                        AllowInFramePivots = !opt.Strict,
+                        InterpolateMissingFrames = opt.Interp,
+                        Debone = opt.Debone
                     };
                     scmlreader.Read();
                     reader = scmlreader;
@@ -112,7 +115,8 @@ namespace kanimal_cli
                 case "scml":
                     var scmlWriter = new ScmlWriter(reader)
                     {
-                        FillMissingSprites = !opt.Strict
+                        FillMissingSprites = !opt.Strict,
+                        AllowDuplicateSprites = !opt.Strict
                     };
                     scmlWriter.SaveToDir(Path.Join(opt.OutputPath));
                     break;

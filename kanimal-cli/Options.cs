@@ -19,6 +19,13 @@ namespace kanimal_cli
     {
         [Option('S', "strict", Required = false, HelpText = "When writing to scml, enabling this flag ")]
         public bool Strict { get; set; }
+
+        [Option('i', "interpolate", Required = false, HelpText = "Enable interpolating scml files on load.")]
+        public bool Interp { get; set; }
+
+        [Option('b', "debone", Required = false, HelpText = "Enable deboning scml files on load.")]
+        public bool Debone { get; set; }
+
     }
 
     [Verb("dump", HelpText = "Output a dump of the specified kanim.")]

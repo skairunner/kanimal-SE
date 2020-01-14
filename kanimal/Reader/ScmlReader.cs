@@ -30,6 +30,7 @@ namespace kanimal
         private Dictionary<Filename, Bitmap> inputSprites; // The keys in this dictionary are filenames, *with* the file extension, if it exists.
 
         public bool AllowMissingSprites = true;
+        public bool AllowInFramePivots = true;
         public bool InterpolateMissingFrames = true;
         public bool Debone = true;
 
@@ -127,6 +128,17 @@ namespace kanimal
         {
             Logger.Info("Reading image files.");
             ReadProjectSprites();
+
+            // Only use the sprites that are included in the project
+            List<SpriteName> allSprites = inputSprites.Select(sprite => sprite.Key.ToSpriteName()).ToList();
+            inputSprites = inputSprites.Where(sprite => projectSprites.ContainsKey(sprite.Key.ToSpriteName())).ToDictionary(x => x.Key, x => x.Value);
+            List<SpriteName> usedSprites = inputSprites.Select(sprite => sprite.Key.ToSpriteName()).ToList();
+
+            List<string> unusedSprites = allSprites.FindAll(sprite => !usedSprites.Contains(sprite)).Select(sprite => sprite.ToFilename().ToString()).ToList();
+            if (unusedSprites.Count > 0)
+            {
+                Logger.Warn($"There were unused sprites in the SCML project folder: {unusedSprites.Join()}. Did you forget to included these in the SCML file? You must manually add in files that are part of a symbol_override if they aren't explicitly placed into any animations in the SCML. ");
+            }
 
             // Also set the output list of sprites
             Sprites = new List<Sprite>();
@@ -587,15 +599,26 @@ namespace kanimal
             if (hasInconsistentIntervals)
             {
                 var anims = inconsistentAnims.ToList().Join();
-                throw new ProjectParseException(
-                    $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.");
+                string error = $"SCML format exception: The intervals in the anims {anims} were inconsistent. Aborting read.";
+                if (!InterpolateMissingFrames)
+                {
+                    error += " Try enabling keyframe interpolation with the \"-i\" flag and try again.";
+                }
+                throw new ProjectParseException(error);
             }
 
             if (hasPivotsSpecifiedInTimeline)
             {
                 var anims = pivotAnims.ToList().Join();
-                throw new ProjectParseException(
-                    $"SCML format exception: There were pivot points specified in timelines rather than only on the sprites in anims {anims}. Aborting read.");
+                if (AllowInFramePivots)
+                {
+                    Logger.Warn($"Encountered pivot points specified in timelines in anims {anims}. These pivot point changes will not be respected. Strict-mode is off. Converting anyway.");
+                }
+                else
+                {
+                    throw new ProjectParseException($"SCML format exception: There were pivot points specified in timelines rather than only on the sprites in anims {anims}. Aborting read.");
+                }
+
             }
 
             AnimData.AnimCount = animCount;

@@ -22,6 +22,7 @@ namespace kanimal
         protected XmlElement Entity;
 
         public bool FillMissingSprites = true; // When true, if a file is referenced in frames but doesn't exist as a sprite, add it as a blank 1x1 sprite.
+        public bool AllowDuplicateSprites = true; // When true if a sprite is defined multiple times, only utilize the first definition.
 
         public ScmlWriter(Reader reader)
         {
@@ -97,7 +98,14 @@ namespace kanimal
                     var key = row.GetSpriteName().ToFilename();
                     if (filenameindex.ContainsKey(key))
                     {
-                        throw new Exception($"filenameindex already contains a key for the sprite {key.Value}!");
+                        if (AllowDuplicateSprites)
+                        {
+                            Logger.Warn($"Duplicate sprite for {key.Value}. This may be indicative of a problem with the source file.");
+                        }
+                        else
+                        {
+                            throw new Exception($"filenameindex already contains a key for the sprite {key.Value}! Try again without strict mode if you believe this is in error.");
+                        }
                     }
 
                     filenameindex[key] = fileIndex;
@@ -112,7 +120,7 @@ namespace kanimal
 
                     var fileNode = Scml.CreateElement("file");
                     fileNode.SetAttribute("id", fileIndex.ToString());
-                    fileNode.SetAttribute("name", $"{row.Name}_{row.Index}");
+                    fileNode.SetAttribute("name", $"{row.Name}_{row.Index}.png");
                     fileNode.SetAttribute("width", ((int) row.Width).ToString());
                     fileNode.SetAttribute("height", ((int) row.Height).ToString());
                     fileNode.SetAttribute("pivot_x", pivotX.ToStringInvariant());
