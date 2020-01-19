@@ -31,38 +31,13 @@ namespace kanimal
 
         public bool AllowMissingSprites = true;
         public bool AllowInFramePivots = true;
-        public bool InterpolateMissingFrames = true;
-        public bool Debone = true;
+        public bool InterpolateMissingFrames = false;
+        public bool Debone = false;
 
         public ScmlReader(Stream scmlStream, Dictionary<Filename, Bitmap> sprites)
         {
             scml = new XmlDocument();
             scml.Load(scmlStream);
-            if (InterpolateMissingFrames)
-            {
-                try
-                {
-                    scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
-                }
-                catch (Exception e)
-                {
-                    Logger.Fatal($"Failed to interpolate in-between frames. Original exception is as follows:");
-                    ExceptionDispatchInfo.Capture(e).Throw();
-                }
-            }
-            if (Debone)
-            {
-                try
-                {
-                    scml = new DebonerProcessor().Process(scml); // replace the scml with deboned scml
-                }
-                catch (Exception e)
-                {
-                    Logger.Fatal($"Failed to debone the scml document. Original exception is as follows:");
-                    ExceptionDispatchInfo.Capture(e).Throw();
-                }
-            }
-
             inputSprites = sprites;
         }
         
@@ -77,30 +52,6 @@ namespace kanimal
             {
                 Logger.Fatal($"You must specify a path to load the SCML from. Original exception is as follows:");
                 ExceptionDispatchInfo.Capture(e).Throw();
-            }
-            if (InterpolateMissingFrames)
-            {
-                try
-                {
-                    scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
-                }
-                catch (Exception e)
-                {
-                    Logger.Fatal($"Failed to interpolate in-between frames. Original exception is as follows:");
-                    ExceptionDispatchInfo.Capture(e).Throw();
-                }
-            }
-            if (Debone)
-            {
-                try
-                {
-                    scml = new DebonerProcessor().Process(scml); // replace the scml with deboned scml
-                }
-                catch (Exception e)
-                {
-                    Logger.Fatal($"Failed to debone the scml document. Original exception is as follows:");
-                    ExceptionDispatchInfo.Capture(e).Throw();
-                }
             }
             // Due to scml conventions, our input directory is the same as the scml file's
             var inputDir = Path.Join(scmlpath, "../");
@@ -126,6 +77,32 @@ namespace kanimal
 
         public override void Read()
         {
+            // process converters first
+            if (InterpolateMissingFrames)
+            {
+                try
+                {
+                    scml = new KeyFrameInterpolateProcessor().Process(scml); // replace the scml with fully keyframed scml
+                }
+                catch (Exception e)
+                {
+                    Logger.Fatal($"Failed to interpolate in-between frames. Original exception is as follows:");
+                    ExceptionDispatchInfo.Capture(e).Throw();
+                }
+            }
+            if (Debone)
+            {
+                try
+                {
+                    scml = new DebonerProcessor().Process(scml); // replace the scml with deboned scml
+                }
+                catch (Exception e)
+                {
+                    Logger.Fatal($"Failed to debone the scml document. Original exception is as follows:");
+                    ExceptionDispatchInfo.Capture(e).Throw();
+                }
+            }
+
             Logger.Info("Reading image files.");
             ReadProjectSprites();
 
