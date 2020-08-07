@@ -99,6 +99,7 @@ Other available switches are as follows:
 | `-s/--silent` | Set verbosity level to FATAL (default INFO). This means no messages are logged on successful conversion, including warnings. |
 | `-i/--interpolate` | Interpolate SCML files on load. This means that all in-between frames are generated from the keyframes. |
 |`-S/--strict` | Enforce strict conversion.|
+|`-f/--strictly-order-files` | Instead of inferring the file types from the extensions, require that files be provided in png, build, anim order | 
 
 ### Kanim dump
 KSE supports dumping the contents of a kanim file to a (relatively) readable text file. The command is:
