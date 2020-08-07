@@ -43,6 +43,9 @@ namespace kanimal_cli
 
         [Option('O', "output-format", Required = true, HelpText = "The output format, from [kanim, scml]")]
         public string OutputFormat { get; set; }
+        
+        [Option('f', "strictly-order-files", Required = false, HelpText = "When converting from kanim, require that files are provided in png, build, anim order. Also ignores extensions.")]
+        public bool Ordered { get; set; }
 
         [Value(0)] public IEnumerable<string> Files { get; set; }
     }

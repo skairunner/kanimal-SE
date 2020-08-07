@@ -67,9 +67,21 @@ namespace kanimal_cli
                     reader = scmlreader;
                     break;
                 case "kanim":
-                    var png = files.Find(path => path.EndsWith(".png"));
-                    var build = files.Find(path => path.EndsWith("build.bytes"));
-                    var anim = files.Find(path => path.EndsWith("anim.bytes"));
+                    var png = "";
+                    var build = "";
+                    var anim = "";
+                    if (((GenericOptions) opt).Ordered)
+                    {
+                        png = files[0];
+                        build = files[1];
+                        anim = files[2];
+                    }
+                    else
+                    {
+                        png = files.Find(path => path.EndsWith(".png"));
+                        build = files.Find(path => path.EndsWith("build.bytes"));
+                        anim = files.Find(path => path.EndsWith("anim.bytes")); 
+                    }
 
                     var fileNames = new[] {png, build, anim};
 
@@ -94,7 +106,6 @@ namespace kanimal_cli
 
                         Environment.Exit((int) ExitCodes.IncorrectArguments);
                     }
-
                     reader = new KanimReader(
                         new FileStream(build, FileMode.Open),
                         new FileStream(anim, FileMode.Open),
