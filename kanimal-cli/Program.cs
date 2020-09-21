@@ -70,7 +70,7 @@ namespace kanimal_cli
                     var png = "";
                     var build = "";
                     var anim = "";
-                    if (((GenericOptions) opt).Ordered)
+                    if (opt is GenericOptions && ((GenericOptions)opt).Ordered)
                     {
                         png = files[0];
                         build = files[1];
