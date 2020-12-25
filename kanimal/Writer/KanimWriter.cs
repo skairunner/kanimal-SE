@@ -47,13 +47,14 @@ namespace kanimal
             writer.Write("BILD".ToCharArray());
             writer.Write(10); // build version
             Logger.Debug("version=10");
-            writer.Write(BuildData.SymbolCount);
-            Logger.Debug($"symbols={BuildData.SymbolCount}");
+            writer.Write(BuildData.Symbols.Count);
+            Logger.Debug($"symbols={BuildData.Symbols.Count}");
             writer.Write(BuildData.FrameCount);
             Logger.Debug($"frames={BuildData.FrameCount}");
             writer.WritePString(BuildData.Name);
             Logger.Debug($"name={BuildData.Name}");
-            for (var i = 0; i < BuildData.SymbolCount; i++)
+
+            for (var i = 0; i < BuildData.Symbols.Count; i++)
             {
                 var symbol = BuildData.Symbols[i];
                 Logger.Debug(
