@@ -146,6 +146,10 @@ namespace kanimal_cli
 
         private static void Main(string[] args)
         {
+            System.Globalization.CultureInfo customCulture = (System.Globalization.CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
+            customCulture.NumberFormat.NumberDecimalSeparator = ".";
+
+            System.Threading.Thread.CurrentThread.CurrentCulture = customCulture;
             Parser.Default
                 .ParseArguments<KanimToScmlOptions, ScmlToKanimOptions, GenericOptions, DumpOptions, BatchConvertOptions
                 >(args)
