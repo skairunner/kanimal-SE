@@ -374,9 +374,13 @@ namespace kanimal
 
                         var element = new Element();
                         element.Flags = 0;
+                        // Spriter does support setting alpha per keyframe, so we grab that value for the alpha channel of the kanim element
+                        if (object_ref.HasAttribute("a"))
+                            element.A = float.Parse(object_ref.Attributes["a"].Value);
+                        else
+                            element.A = 1.0f;
                         // spriter does not support changing colors of components
                         // through animation so this can be safely set to 0
-                        element.A = 1.0f;
                         element.B = 1.0f;
                         element.G = 1.0f;
                         element.R = 1.0f;
