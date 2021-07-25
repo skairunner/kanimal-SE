@@ -311,6 +311,7 @@ namespace kanimal
                     object_def.SetAttribute("angle", trans.Angle.ToStringInvariant());
                     object_def.SetAttribute("scale_x", trans.ScaleX.ToStringInvariant());
                     object_def.SetAttribute("scale_y", trans.ScaleY.ToStringInvariant());
+                    object_def.SetAttribute("a", element.A.ToStringInvariant());
 
                     keyframe.AppendChild(object_def);
                     timelineMap[idMap[name]].AppendChild(keyframe);
