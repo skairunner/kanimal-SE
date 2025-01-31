@@ -244,6 +244,11 @@ namespace kanimal
             var entity = scml.GetElementsByTagName("entity")[0];
             foreach (var animation in entity.ChildNodes.GetElements())
             {
+                if (animation.Name == "character_map")
+                {
+                    Logger.Debug("Skipping <character_map> child of <entity>");
+                    continue;
+                }
                 if (animation.Name != "animation")
                     throw new ProjectParseException(
                         $"SCML format exception: all children of <entity> should be <animation>, but was <{animation.Name}> instead.");
@@ -284,6 +289,11 @@ namespace kanimal
 
             foreach (var anim in animations)
             {
+                if (anim.Name == "character_map")
+                {
+                    Logger.Debug("Skipping <character_map> child of <entity>");
+                    continue;
+                }
                 animCount++;
                 if (anim.Name != "animation")
                     throw new ProjectParseException(
@@ -635,6 +645,11 @@ namespace kanimal
                 }
 
                 var anim = (XmlElement) child;
+                if (anim.Name == "character_map")
+                {
+                    Logger.Debug("Skipping <character_map> child of <entity>");
+                    continue;
+                }
                 if (anim.Name != "animation")
                     throw new ProjectParseException(
                         $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
