@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using NLog;
 using MaxRectsBinPack;
@@ -84,12 +85,8 @@ namespace kanimal
                 else
                     sheetW *= 2;
 
-            using (var grD = Graphics.FromImage(SpriteSheet))
-            {
-                foreach (var sprite in SpriteAtlas)
-                    grD.DrawImage(sprite.Sprite,
-                        new Rectangle(sprite.X, sprite.Y, sprite.Width, sprite.Height));
-            }
+            foreach (var sprite in SpriteAtlas)
+                sprite.Sprite.CopyTo(SpriteSheet, sprite.X, sprite.Y);
 
             Logger.Info($"Packed {sheetW} x {sheetH}");
         }
@@ -117,7 +114,7 @@ namespace kanimal
                 SpriteAtlas.Add(new PackedSprite(rect.X, rect.Y, sprite));
             }
 
-            SpriteSheet = new Bitmap(sheet_w, sheet_h);
+            SpriteSheet = new Bitmap(sheet_w, sheet_h, PixelFormat.Format32bppArgb);
 
             return true;
         }
